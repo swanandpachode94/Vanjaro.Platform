@@ -152,8 +152,6 @@ namespace Vanjaro.Skin
                 WebForms.RegisterClientScriptBlock(Page, "DefaultPath", "var VjThemePath='" + Page.ResolveUrl("~/Portals/_default/vThemes/" + Core.Managers.ThemeManager.CurrentTheme.Name) + "'; var VjDefaultPath='" + Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/Images/") + "'; var VjSitePath='" + Page.ResolveUrl("~/DesktopModules/Vanjaro/") + "';", true);
                 ClientResourceManager.RegisterScript(Page, Page.ResolveUrl("~/Portals/_default/Skins/Vanjaro/Resources/js/skin.js"), 2, "DnnFormBottomProvider");
                 WebForms.RegisterClientScriptInclude(Page, "VJ-Bootstrap-JS", FrameworkManager.Request("Bootstrap", "js/bootstrap.min.js"), true, "DnnBodyProvider");
-                if ((TabPermissionController.HasTabPermission("EDIT") || (page != null && page.StateID.HasValue && HasReviewPermission)))
-                    InjectThemeScripts();
             }
             else
             {
@@ -161,7 +159,6 @@ namespace Vanjaro.Skin
             }
             HandleUXM();
             ResetModulePanes();
-            //InitGuidedTours();
             AccessDenied();
             InjectAnalyticsScript();
         }
@@ -242,9 +239,10 @@ namespace Vanjaro.Skin
             {
                 if (File.Exists(HttpContext.Current.Server.MapPath("~/Portals/" + PortalSettings.PortalId + "/vThemes/" + ThemeManager.CurrentTheme.Name + "/theme.editor.js")))
                     ClientResourceManager.RegisterScript(Page, Page.ResolveUrl("~/Portals/" + PortalSettings.PortalId + "/vThemes/" + ThemeManager.CurrentTheme.Name + "/theme.editor.js"));
+
+                if (!string.IsNullOrEmpty(ThemeManager.CurrentTheme.Assembly) && !string.IsNullOrEmpty(ThemeManager.CurrentTheme.ClientScript))
+                    ScriptManager.RegisterClientScriptBlock(this, this.GetType(), "ThemeClientScript", "<script type=\"text/javascript\" src=\"" + Page.ClientScript.GetWebResourceUrl(Type.GetType(ThemeManager.CurrentTheme.Assembly), ThemeManager.CurrentTheme.ClientScript) + "\"></script>", false);
             }
-            if (ThemeManager.CurrentTheme.HasThemeJS())
-                ClientResourceManager.RegisterScript(Page, Page.ResolveUrl(ThemeManager.CurrentTheme.ThemeJS));
         }
         private void HandleUXM()
         {
@@ -282,36 +280,6 @@ namespace Vanjaro.Skin
                     }
                 }
             }
-        }
-
-        private void InjectThemeScripts()
-        {
-            string ScriptsPath = System.Web.Hosting.HostingEnvironment.MapPath(Core.Managers.ThemeManager.CurrentTheme.ScriptsPath);
-
-            string CacheKey = CacheFactory.GetCacheKey(CacheFactory.Keys.ThemeManager, "ThemeScripts");
-            string ThemeScripts = CacheFactory.Get(CacheKey);
-
-            if (Directory.Exists(ScriptsPath) && string.IsNullOrEmpty(ThemeScripts))
-            {
-                foreach (string file in Directory.GetFiles(ScriptsPath))
-                {
-                    string FileName = Path.GetFileName(file);
-                    if (!string.IsNullOrEmpty(FileName))
-                    {
-                        if (FileName.EndsWith(".js"))
-                            ThemeScripts += File.ReadAllText(ScriptsPath + "/" + FileName);
-                    }
-                }
-                CacheFactory.Set(CacheKey, ThemeScripts);
-            }
-
-            if (!string.IsNullOrEmpty(ThemeScripts))
-            {
-                string SharedResourceFile = ScriptsPath.Replace("/js", "").Replace(@"\js", "") + "App_LocalResources/Shared.resx";
-                ThemeScripts = new DNNLocalizationEngine(null, SharedResourceFile, ShowMissingKeys).Parse(ThemeScripts);
-            }
-
-            WebForms.RegisterStartupScript(Page, "ThemeBlocks", "LoadThemeBlocks = function (grapesjs) { grapesjs.plugins.add('ThemeBlocks', (editor, opts = {}) => { " + ThemeScripts + "}); };", true);
         }
 
         private void InjectViewport()
@@ -751,9 +719,9 @@ namespace Vanjaro.Skin
                         if (!string.IsNullOrEmpty(response.Style))
                         {
                             if (item.Attributes.Where(a => a.Name == "data-guid").FirstOrDefault() != null && !string.IsNullOrEmpty(item.Attributes.Where(a => a.Name == "data-guid").FirstOrDefault().Value))
-                                WebForms.RegisterClientScriptBlock(Page, "BlocksStyle" + item.Attributes.Where(a => a.Name == "data-guid").FirstOrDefault().Value, "<style type=\"text/css\" vj=\"true\" vjdataguid=\"" + item.Attributes.Where(a => a.Name == "data-guid").FirstOrDefault().Value + "\">" + response.Style + "</style>", false);
+                                WebForms.RegisterClientStyleBlock(Page, "BlocksStyle" + item.Attributes.Where(a => a.Name == "data-guid").FirstOrDefault().Value, "<style type=\"text/css\" vj=\"true\" vjdataguid=\"" + item.Attributes.Where(a => a.Name == "data-guid").FirstOrDefault().Value + "\">" + response.Style + "</style>", false);
                             else
-                                WebForms.RegisterClientScriptBlock(Page, "BlocksStyle" + item.Attributes.Where(a => a.Name == "data-block-type").FirstOrDefault().Value, "<style type=\"text/css\">" + response.Style + "</style>", false);
+                                WebForms.RegisterClientStyleBlock(Page, "BlocksStyle" + item.Attributes.Where(a => a.Name == "data-block-type").FirstOrDefault().Value, "<style type=\"text/css\">" + response.Style + "</style>", false);
                         }
                     }
 
@@ -930,6 +898,8 @@ namespace Vanjaro.Skin
             }
             else if (!string.IsNullOrEmpty(Request.QueryString["icp"]) && Convert.ToBoolean(Request.QueryString["icp"]) == true && !string.IsNullOrEmpty(Request.QueryString["pv"]) && Convert.ToBoolean(Request.QueryString["pv"]) == true)
             {
+                HtmlGenericControl body = (HtmlGenericControl)this.Page.FindControl("Body");
+                body.Attributes.Add("class", "preview");
                 return true;
             }
 
@@ -1070,32 +1040,6 @@ namespace Vanjaro.Skin
             catch (Exception ex)
             {
                 ExceptionManager.LogException(ex);
-            }
-        }
-
-        private void InitGuidedTours()
-        {
-            if (!PortalController.Instance.GetPortalSettings(PortalSettings.PortalId).ContainsKey("VanjaroToursGuided")
-                && (TabPermissionController.HasTabPermission("EDIT") || UserController.Instance.GetCurrentUserInfo().IsAdmin || UserController.Instance.GetCurrentUserInfo().IsSuperUser))
-            {
-                StringBuilder sb = new StringBuilder();
-                //initialize instance
-                sb.Append("var enjoyhint_instance = new EnjoyHint({});");
-                //Only one step - highlighting(with description) "New" button
-                //hide EnjoyHint after a click on the button.
-                sb.Append("var enjoyhint_script_steps = [");
-                sb.Append("{'click #mode-switcher' : \"Welcome to your new site. Let\'s learn the basics. <br> Click on \'Arrow Toggle\' to edit or manage your site.\"},");
-                sb.Append("{'click .settings' : 'Use the Site Menu to manage pages, assets, content, and settings.'},");
-                sb.Append("{'click .Messages' : 'Your Tasks & Messages appear here.'},");
-                sb.Append("{'click .active' : 'Use the Blocks Menu to drag and drop and build your page'}");
-                sb.Append("];");
-                //set script config
-                sb.Append("enjoyhint_instance.set(enjoyhint_script_steps);");
-                //run Enjoyhint script
-                sb.Append("enjoyhint_instance.run();");
-                FrameworkManager.Load(this, "EnjoyHint");
-                WebForms.RegisterStartupScript(Page, "EnjoyHintJS", sb.ToString(), true);
-                PortalController.UpdatePortalSetting(PortalSettings.PortalId, "VanjaroToursGuided", "true");
             }
         }
 

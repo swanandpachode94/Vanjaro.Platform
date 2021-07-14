@@ -608,11 +608,11 @@ namespace Vanjaro.Core
                         {
                             if (!string.IsNullOrEmpty(block.ContentJSON))
                             {
-                                block.ContentJSON = PageManager.TokenizeTemplateLinks(PageManager.DeTokenizeLinks(block.ContentJSON, PortalID), true, Assets);
+                                block.ContentJSON = PageManager.TokenizeTemplateLinks(PortalID, PageManager.DeTokenizeLinks(block.ContentJSON, PortalID), true, Assets);
                                 block.ContentJSON = RemovePermissions(null, block.ContentJSON);
                             }
                             if (!string.IsNullOrEmpty(block.StyleJSON))
-                                block.StyleJSON = PageManager.TokenizeTemplateLinks(PageManager.DeTokenizeLinks(block.StyleJSON, PortalID), true, Assets);
+                                block.StyleJSON = PageManager.TokenizeTemplateLinks(PortalID, PageManager.DeTokenizeLinks(block.StyleJSON, PortalID), true, Assets);
                         }
                         CacheFactory.Clear(CacheFactory.GetCacheKey(CacheFactory.Keys.CustomBlock + "ALL", PortalID));
                     }
@@ -649,7 +649,7 @@ namespace Vanjaro.Core
                                         {
                                             AddZipItem("Assets/" + FileName, new WebClient().DownloadData(FileUrl), zip);
                                         }
-                                        catch (Exception ex) { ExceptionManager.LogException(ex); }
+                                        catch (Exception ex) {}
                                     }
                                 }
                             }
@@ -740,7 +740,7 @@ namespace Vanjaro.Core
             //                            {
             //                                AddZipItem("Assets/" + FileName, new WebClient().DownloadData(FileUrl), zip);
             //                            }
-            //                            catch (Exception ex) { ExceptionManager.LogException(ex); }
+            //                            catch (Exception ex) {}
             //                        }
             //                    }
             //                }

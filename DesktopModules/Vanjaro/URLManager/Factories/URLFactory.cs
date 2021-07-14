@@ -32,7 +32,7 @@ namespace Vanjaro.URL.Factories
             Cache.Clear();
             //DataCache.RemoveCache(Cache.Keys.URLEntity + URL.ModuleID.ToString() + "-" + URL.EntityID.ToString() + "-" + URL.Entity.ToString());
         }
-        public static URLEntity GetURL(int ModuleID, string Slug)
+        public static URLEntity GetURL(int ModuleID, string Slug, int PortalID)
         {
             if (Slug == null)
                 throw new Exception("Slug cannot be empty or null");
@@ -49,7 +49,15 @@ namespace Vanjaro.URL.Factories
                     if (ModuleID > 0)
                         URL = URLEntity.Fetch("WHERE ModuleID=@0 AND Slug=@1", ModuleID, s).SingleOrDefault();
                     else
-                        URL = URLEntity.Fetch("WHERE Slug=@0", s).SingleOrDefault();
+                    {
+                        foreach (URLEntity url in URLEntity.Fetch("WHERE Slug=@0", s))
+                        {
+                            ModuleController mc = new ModuleController();
+                            ModuleInfo minfo = mc.GetModule(url.ModuleID);
+                            if (minfo.PortalID == PortalID)
+                                URL = url;
+                        }
+                    }
 
                     DataCache.SetCache(Cache.Keys.Slug + ModuleID.ToString() + "-" + s, URL, Cache.Keys.Cache_Time_Heavy);
                 }
@@ -65,11 +73,11 @@ namespace Vanjaro.URL.Factories
         /// </summary>
         /// <param name="Slugs"></param>
         /// <returns></returns>
-        public static URLEntity GetURL(int ModuleID, string[] Slugs)
+        public static URLEntity GetURL(int ModuleID, string[] Slugs, int PortalID)
         {
             foreach (string s in Slugs)
             {
-                URLEntity urlEntity = GetURL(ModuleID, s);
+                URLEntity urlEntity = GetURL(ModuleID, s, PortalID);
 
                 if (urlEntity != null)
                     return urlEntity;
@@ -175,13 +183,25 @@ namespace Vanjaro.URL.Factories
         {
             return URLEntity.Query("where Slug=@0", Slug).Count() == 0;
         }
+        public static bool IsUnique(string Slug, int ModuleID)
+        {
+            ModuleController mc = new ModuleController();
+            ModuleInfo ActiveModule = mc.GetModule(ModuleID);
+            foreach (URLEntity s in URLEntity.Query("where Slug=@0", Slug))
+            {
+                ModuleInfo minfo = mc.GetModule(s.ModuleID);
+                if (minfo.PortalID == ActiveModule.PortalID && s.Slug == Slug)
+                    return false;
+            }
+            return true;
+        }
         public static string GetUnique(int ModuleID, string Slug)
         {
             int i = 1;
             string sSlug = Sanitize(Slug);
             string NewSlug = sSlug;
 
-            while (!IsUnique(NewSlug))
+            while (!IsUnique(NewSlug, ModuleID))
             {
                 NewSlug = sSlug + i.ToString();
                 i++;
@@ -444,16 +464,24 @@ namespace Vanjaro.URL.Factories
 
             return ModuleTabIndex;
         }
-        private static Dictionary<string, int> GetSlugIndex()
+        private static Dictionary<string, int> GetSlugIndex(int PortalID)
         {
             Dictionary<string, int> Index = DataCache.GetCache<Dictionary<string, int>>(Cache.Keys.SlugIndex);
 
             if (Index == null)
             {
-                Index = URLEntity.Fetch("").ToList().ToDictionary(u => u.Slug, u => u.ModuleID);
-
-                if (Index == null)
-                    Index = new Dictionary<string, int>();
+                Index = new Dictionary<string, int>();
+                //Index = URLEntity.Fetch("").ToList().ToDictionary(u => u.Slug, u => u.ModuleID);
+                foreach (URLEntity s in URLEntity.Fetch("").ToList())
+                {
+                    ModuleController mController = new ModuleController();
+                    ModuleInfo minfo = mController.GetModule(s.ModuleID);
+                    if (minfo.PortalID == PortalID)
+                    {
+                        if (Index != null && !Index.ContainsKey(s.Slug))
+                            Index.Add(s.Slug, s.ModuleID);
+                    }
+                }
 
                 ModuleController mc = new ModuleController();
 
@@ -483,7 +511,7 @@ namespace Vanjaro.URL.Factories
         {
             if (urlParms.Length > 0)
             {
-                Dictionary<string, int> Index = GetSlugIndex();
+                Dictionary<string, int> Index = GetSlugIndex(Pi.PortalID);
 
                 for (int i = 0; i < urlParms.Length; i++)
                 {

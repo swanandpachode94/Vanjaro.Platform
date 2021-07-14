@@ -8,7 +8,7 @@
     $scope.targetParent;
 
     $scope.onInit = function () {
-        window.parent.window.VJIsSaveCall = false;
+        window.parent.window.VJIsSaveCall = true;
         $('.uiengine-wrapper a[data-target="#!/admin"]').addClass("active");
         $('.uiengine-wrapper a[data-target="#!/imageonline"]').removeClass("active");
         setTimeout(function () {
@@ -18,8 +18,10 @@
             $('[identifier="settings_image"]').find('.url-add .choosefile').html('<span style="font-family:Arial, Helvetica, sans-serif;">[L:Upload]</span>');
             $('[identifier="settings_image"]').find('.url-add .choosefile').addClass('fas fa-plus');
         }, 10);
+        if ($(window.parent.document.body).find('[data-bs-dismiss="modal"]').length <= 0)
+            $(window.parent.document.body).find('.btn-close').attr('data-bs-dismiss', 'modal');
         $(window.parent.document.body).find('[data-bs-dismiss="modal"]').on("click", function (e) {
-            window.parent.window.VJIsSaveCall = true;
+            window.parent.window.VJIsSaveCall = false;
             window.parent.VjEditor.runCommand("save");
         });
         $scope.BindFolderEvents();
@@ -106,7 +108,7 @@
     };
 
     $scope.GetURL = function (fileid) {
-        window.parent.window.VJIsSaveCall = false;
+        window.parent.window.VJIsSaveCall = true;
         common.webApi.post('Upload/GetUrl', 'fileid=' + fileid).then(function (data) {
             if (data.data.Status == 'Success') {
                 var Link = data.data.Url;
@@ -120,21 +122,37 @@
                     //checked background image has not changed
                     if (typeof target.attributes.type != 'undefined') {
 
-                        target.set('src', url);
-                        if ($scope.targetParent == undefined)
-                            $scope.targetParent = target.parent();
-                        if (data.data.Urls.length)
-                            parent.ChangeToWebp($scope.targetParent, data.data.Urls);
+                        if (target.attributes.type == 'image') {
+
+                            target.set('src', url);
+
+                            if ($scope.targetParent == undefined)
+                                $scope.targetParent = target.parent();
+
+                            if (data.data.Urls.length)
+                                parent.ChangeToWebp($scope.targetParent, data.data.Urls);
+                            else {
+                                target.removeStyle('max-width');
+                                $($scope.targetParent.components().models).each(function (index, component) {
+                                    if (component.getName() == "Source")
+                                        component.remove();
+                                });
+                            }
+                        }
                         else {
-                            target.removeStyle('max-width');
-                            $($scope.targetParent.components().models).each(function (index, component) {
-                                if (component.getName() == "Source")
-                                    component.remove();
-                            });
+
+                            if (data.data.Urls.length)
+                                url = data.data.Urls.find(v => v.Type == 'webp').Url;                            
+
+                            target.set('src', url);
                         }
                     }
                     else {
                         var background = window.parent.VjEditor.StyleManager.getProperty('background_&_shadow', 'background');
+                        
+                        if (data.data.Urls.length)
+                            url = data.data.Urls.find(v => v.Type == 'webp').Url;                        
+
                         background.getCurrentLayer().attributes.properties.models.find(m => m.id == 'background-image').setValue(url);
                     }
                 }

@@ -499,6 +499,29 @@ global.BuildBlockComponent = function (vjcomps) {
                     v.content = '';
                 }
             }
+            else if (v.content != undefined && v.content.length > 0) {
+                if (v.components == undefined || v.components[0] == undefined) {
+                    var component = { components: [], content: '' };
+                    v.components = [];
+                    v.components.push(component);
+                }
+                if (v.components != undefined && v.components[0] != undefined) {
+                    v.components[0].components = [];
+                    if (v.attributes["data-block-type"] == "Logo") {
+                        var style = $(v.components[0].content).find('img').attr('style');
+                        v.components[0].content = $(v.content)[0].innerHTML;
+                        var contentdom = $(v.components[0].content);
+                        $(contentdom).find('img').attr('style', style);
+                        v.components[0].content = contentdom[0].outerHTML;
+                    }
+                    else
+                        v.components[0].content = v.content;
+                    var existingcomp = v.components[0];
+                    v.components = [];
+                    v.components.push(existingcomp);
+                    v.content = '';
+                }
+            }
         }
         else if (v.components != undefined) {
             BuildBlockComponent(v.components);
@@ -664,4 +687,36 @@ global.CleanGjAttrs = function (html) {
         result = compHtml.outerHTML;
     }
     return result;
-}
+};
+
+global.CleanCssrules = function () {
+    try {
+        var ItemsToRemove = [];
+        var DistinctSelectors = [];
+        var AllCssRules = [];
+        $.each(VjEditor.CssComposer.getAll().models, function (i, v) {
+            AllCssRules.push(v);
+        });
+        $.each(AllCssRules.reverse(), function (ci, cv) {
+            if (cv != undefined && cv.attributes != undefined) {
+                var key = cv.attributes.mediaText + '|' + cv.attributes.state + '|';
+                if (cv.attributes.selectors != undefined && cv.attributes.selectors.models != undefined) {
+                    $.each(cv.attributes.selectors.models, function (i, v) {
+                        if (v != undefined && v.attributes != undefined && v.attributes.name != undefined)
+                            key += v.attributes.name;
+                    });
+                }
+                if (DistinctSelectors.indexOf(key) >= 0)
+                    ItemsToRemove.push(cv);
+                else
+                    DistinctSelectors.push(key);
+            }
+        });
+        if (ItemsToRemove.length > 0) {
+            $.each(ItemsToRemove, function (i, v) {
+                VjEditor.CssComposer.getAll().remove(v);
+            });
+        }
+    }
+    catch (e) { console.log(e); }
+};

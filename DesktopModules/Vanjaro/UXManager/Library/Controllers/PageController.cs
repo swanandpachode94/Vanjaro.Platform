@@ -26,6 +26,7 @@ namespace Vanjaro.UXManager.Library.Controllers
         {
             var page = Vanjaro.Core.Managers.PageManager.GetLatestVersion(PortalSettings.ActiveTab.TabID, PortalSettings.CultureCode, true);
             Core.Managers.PageManager.ApplyGlobalBlockJSON(page);
+            Core.Managers.PageManager.ApplyBlockJSON(page);
             return page;
         }
 
@@ -61,7 +62,10 @@ namespace Vanjaro.UXManager.Library.Controllers
         [DnnPageEditor]
         public string GetPageUrl(int TabID)
         {
-            return PageManager.GetPageUrl(PortalSettings, TabID);
+            string result = PageManager.GetPageUrl(PortalSettings, TabID);
+            if (string.IsNullOrEmpty(result))
+                result = "/";
+            return result;
         }
 
         [HttpGet]

@@ -106,7 +106,7 @@ namespace Vanjaro.UXManager.Extensions.Menu.Pages
                 return actionResult;
             }
 
-            public static ActionResult SavePageDetails(int DefaultWorkflow, int MaxRevisions, PageSettingLayout PageSettingLayout)
+            public static ActionResult SavePageDetails(PortalSettings portalSettings, int DefaultWorkflow, int MaxRevisions, PageSettingLayout PageSettingLayout, bool checkPermission = true)
             {
                 PageSettings pageSettings = PageSettingLayout.PageSettings;
                 if (pageSettings.PageType.ToLower() == "url")
@@ -125,18 +125,20 @@ namespace Vanjaro.UXManager.Extensions.Menu.Pages
                     pageSettings.PageType = "normal";
                 }
 
-                PortalSettings portalSettings = PortalController.Instance.GetCurrentSettings() as PortalSettings;
-
                 dynamic Data = new ExpandoObject();
                 Data.NewTabId = 0;
                 ActionResult actionResult = new ActionResult();
                 try
                 {
-                    if (!SecurityService.Instance.CanSavePageDetails(pageSettings))
+                    if (checkPermission && !SecurityService.Instance.CanSavePageDetails(pageSettings))
                     {
                         //HttpStatusCode.Forbidden  message is hardcoded in DotNetnuke so we localized our side.
                         actionResult.AddError("HttpStatusCode.Forbidden", DotNetNuke.Services.Localization.Localization.GetString("UserAuthorizationForbidden", Components.Constants.LocalResourcesFile));
                     }
+
+                    if (actionResult.IsSuccess && PageSettingLayout.IsAnchor && string.IsNullOrEmpty(PageSettingLayout.AnchorID))
+                        actionResult.AddError("EmptyAnchorID", DotNetNuke.Services.Localization.Localization.GetString("EmptyAnchorID", Components.Constants.LocalResourcesFile));
+
                     if (actionResult.IsSuccess)
                     {
                         pageSettings.Clean();
@@ -146,6 +148,12 @@ namespace Vanjaro.UXManager.Extensions.Menu.Pages
                         //New Page in Vanjaro
                         tab.SkinSrc = "[g]skins/vanjaro/base.ascx";
                         tab.ContainerSrc = "[g]containers/vanjaro/base.ascx";
+
+                        if (PageSettingLayout.IsAnchor)
+                        {
+                            tab.TabSettings["AnchorID"] = PageSettingLayout.AnchorID;
+                            tab.TabSettings["AnchorPageID"] = PageSettingLayout.AnchorPageID;
+                        }
 
                         TabController.Instance.UpdateTab(tab);
 
@@ -264,6 +272,100 @@ namespace Vanjaro.UXManager.Extensions.Menu.Pages
                     CacheFactory.Clear(CacheFactory.Keys.PageLayout);
                 }
             }
+
+            public static void ImportTemplates(PortalInfo portalInfo, UserInfo uInfo, List<Layout> pageLayouts, string portableModulesPath)
+            {
+                int defaultWorkflow = WorkflowManager.GetDefaultWorkflow(0);
+                int maxRevisions = WorkflowManager.GetMaxRevisions(0);
+                PortalSettings portalSettings = new PortalSettings(portalInfo);
+                if (portalSettings.PortalAlias == null)
+                {
+                    foreach (var alias in PortalAliasController.Instance.GetPortalAliasesByPortalId(portalInfo.PortalID).Where(alias => alias.IsPrimary))
+                        portalSettings.PortalAlias = alias;
+                }
+                foreach (Layout layout in pageLayouts)
+                {
+                    ImportTemplate(portalInfo, uInfo, portableModulesPath, defaultWorkflow, maxRevisions, portalSettings, layout, -1);
+                }
+            }
+
+            public static void ImportTemplate(PortalInfo portalInfo, UserInfo uInfo, string portableModulesPath, int defaultWorkflow, int maxRevisions, PortalSettings portalSettings, Layout layout, int parentID)
+            {
+                if (layout != null && portalSettings != null)
+                {
+                    PageSettingLayout pageSettingLayout = new PageSettingLayout(0);
+                    pageSettingLayout.PageSettings = GetDefaultSettings();
+                    pageSettingLayout.PageSettings.AllowIndex = true;
+                    pageSettingLayout.PageSettings.PageType = layout.Type;
+                    pageSettingLayout.PageSettings.Name = layout.Name;
+                    if (layout.Type.ToLower() == "url" && string.IsNullOrEmpty(pageSettingLayout.PageSettings.ExternalRedirection))
+                        pageSettingLayout.PageSettings.ExternalRedirection = layout.Name;
+                    if (parentID > 0)
+                        pageSettingLayout.PageSettings.ParentId = parentID;
+                    ActionResult ActionResult = SavePageDetails(portalSettings, defaultWorkflow, maxRevisions, pageSettingLayout, uInfo.IsAdmin ? false : true);
+                    if (ActionResult.IsSuccess)
+                    {
+                        try
+                        {
+                            if (portalSettings.ActiveTab == null)
+                                portalSettings.ActiveTab = new TabInfo();
+                            portalSettings.ActiveTab.TabID = ActionResult.Data.NewTabId;
+                            SettingManager.ProcessBlocks(portalSettings, uInfo, layout.Blocks, portableModulesPath);
+                            TabInfo tab = TabController.Instance.GetTab(portalSettings.ActiveTab.TabID, portalSettings.ActiveTab.PortalID);
+                            tab.IsVisible = true;
+                            TabController.Instance.UpdateTab(tab);
+                            DotNetNuke.Security.Roles.RoleInfo adminrole = DotNetNuke.Security.Roles.RoleController.Instance.GetRoleByName(portalSettings.ActiveTab.PortalID, "Administrators");
+                            if (adminrole != null)
+                            {
+                                foreach (TabPermissionInfo p in tab.TabPermissions.Where(t => t != null && t.RoleName == "Administrators"))
+                                    p.RoleID = adminrole.RoleID;
+                            }
+                            if (tab.TabPermissions.Where(t => t != null && t.RoleName == "All Users").FirstOrDefault() != null)
+                            {
+                                foreach (TabPermissionInfo p in tab.TabPermissions.Where(t => t != null && t.RoleName == "All Users"))
+                                    p.AllowAccess = true;
+                            }
+                            else
+                                tab.TabPermissions.Add(new TabPermissionInfo { PermissionID = 3, TabID = tab.TabID, AllowAccess = true, RoleID = -1, RoleName = "All Users" });
+                            TabPermissionController.SaveTabPermissions(tab);
+                            SettingManager.UpdateLayoutSettings(tab, layout.Settings);
+                            Dictionary<string, object> LayoutData = new Dictionary<string, object>
+                            {
+                                ["IsPublished"] = false,
+                                ["Comment"] = string.Empty,
+                                ["gjs-assets"] = string.Empty,
+                                ["gjs-css"] = PageManager.DeTokenizeLinks(layout.Style.ToString(), portalInfo.PortalID),
+                                ["gjs-html"] = PageManager.DeTokenizeLinks(layout.Content.ToString(), portalInfo.PortalID),
+                                ["gjs-components"] = PageManager.DeTokenizeLinks(layout.ContentJSON.ToString(), portalInfo.PortalID),
+                                ["gjs-styles"] = PageManager.DeTokenizeLinks(layout.StyleJSON.ToString(), portalInfo.PortalID)
+                            };
+                            PageManager.AddModules(portalSettings, LayoutData, uInfo, portableModulesPath);
+                            PageManager.Update(portalSettings, LayoutData);
+                            List<Core.Data.Entities.Pages> pages = PageManager.GetPages(ActionResult.Data.NewTabId);
+                            Core.Data.Entities.Pages Page = pages.OrderByDescending(o => o.Version).FirstOrDefault();
+                            if (Page != null && uInfo != null)
+                            {
+                                WorkflowState state = WorkflowManager.GetStateByID(Page.StateID.Value);
+                                Page.Version = 1;
+                                Page.StateID = state != null ? WorkflowManager.GetLastStateID(state.WorkflowID).StateID : 2;
+                                Page.IsPublished = true;
+                                Page.PublishedBy = uInfo.UserID;
+                                Page.PublishedOn = DateTime.UtcNow;
+                                Core.Factories.PageFactory.Update(Page, uInfo.UserID);
+                            }
+                            foreach (Layout childLayout in layout.Children)
+                            {
+                                ImportTemplate(portalInfo, uInfo, portableModulesPath, defaultWorkflow, maxRevisions, portalSettings, childLayout, tab.TabID);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            DotNetNuke.Services.Exceptions.Exceptions.LogException(ex);
+                        }
+                    }
+                }
+            }
+
 
             public static ActionResult SaveLayoutAs(int pid, string name, dynamic Data, PortalSettings PortalSettings)
             {
@@ -496,7 +598,6 @@ namespace Vanjaro.UXManager.Extensions.Menu.Pages
             {
                 if (layout != null)
                 {
-                    ProcessBlocks(PortalId, layout.Blocks);
                     Dictionary<string, object> LayoutData = new Dictionary<string, object>
                     {
                         ["IsPublished"] = false,
@@ -516,6 +617,7 @@ namespace Vanjaro.UXManager.Extensions.Menu.Pages
 
                     LayoutData["gjs-styles"] = Core.Managers.PageManager.DeTokenizeLinks(layout.StyleJSON.ToString(), PortalId);
                     PortalSettings.Current.ActiveTab.TabID = ActionResult.Data.NewTabId;
+                    SettingManager.ProcessBlocks(PortalSettings.Current, null, layout.Blocks, null);
                     Core.Managers.PageManager.Update(PortalSettings.Current, LayoutData);
 
                     if (PortalSettings.Current.DefaultLanguage != PortalSettings.Current.CultureCode)
@@ -582,7 +684,7 @@ namespace Vanjaro.UXManager.Extensions.Menu.Pages
                     Dictionary<string, string> Assets = new Dictionary<string, string>();
                     Layout layout = new Layout
                     {
-                        Content = PageManager.TokenizeTemplateLinks(PageManager.DeTokenizeLinks(baseLayout.Content, portalID), false, Assets)
+                        Content = PageManager.TokenizeTemplateLinks(portalID, PageManager.DeTokenizeLinks(baseLayout.Content, portalID), false, Assets)
                     };
                     HtmlDocument html = new HtmlDocument();
                     html.LoadHtml(layout.Content);
@@ -608,13 +710,13 @@ namespace Vanjaro.UXManager.Extensions.Menu.Pages
                         foreach (GlobalBlock block in layout.Blocks)
                         {
                             if (!string.IsNullOrEmpty(block.Html))
-                                block.Html = PageManager.TokenizeTemplateLinks(PageManager.DeTokenizeLinks(block.Html, portalID), false, Assets);
+                                block.Html = PageManager.TokenizeTemplateLinks(portalID, PageManager.DeTokenizeLinks(block.Html, portalID), false, Assets);
                             if (!string.IsNullOrEmpty(block.Css))
-                                block.Css = PageManager.TokenizeTemplateLinks(PageManager.DeTokenizeLinks(block.Css, portalID), false, Assets);
+                                block.Css = PageManager.TokenizeTemplateLinks(portalID, PageManager.DeTokenizeLinks(block.Css, portalID), false, Assets);
                             if (!string.IsNullOrEmpty(block.ContentJSON))
-                                block.ContentJSON = PageManager.TokenizeTemplateLinks(PageManager.DeTokenizeLinks(block.ContentJSON, portalID), true, Assets);
+                                block.ContentJSON = PageManager.TokenizeTemplateLinks(portalID, PageManager.DeTokenizeLinks(block.ContentJSON, portalID), true, Assets);
                             if (!string.IsNullOrEmpty(block.StyleJSON))
-                                block.StyleJSON = PageManager.TokenizeTemplateLinks(PageManager.DeTokenizeLinks(block.StyleJSON, portalID), true, Assets);
+                                block.StyleJSON = PageManager.TokenizeTemplateLinks(portalID, PageManager.DeTokenizeLinks(block.StyleJSON, portalID), true, Assets);
 
                             if (!string.IsNullOrEmpty(block.Html))
                             {
@@ -624,15 +726,15 @@ namespace Vanjaro.UXManager.Extensions.Menu.Pages
                                 block.Html = bhtml.DocumentNode.OuterHtml;
                             }
                         }
-                        Core.Factories.CacheFactory.Clear(Core.Factories.CacheFactory.GetCacheKey(Core.Factories.CacheFactory.Keys.CustomBlock + "ALL", portalID));
+                        Core.Factories.CacheFactory.Clear(Core.Factories.CacheFactory.GetCacheKey(Core.Factories.CacheFactory.Keys.GlobalBlock + "ALL", portalID));
                     }
                     layout.Name = name;
                     layout.SVG = "";
-                    layout.ContentJSON = PageManager.TokenizeTemplateLinks(PageManager.DeTokenizeLinks(baseLayout.ContentJSON, portalID), true, Assets);
+                    layout.ContentJSON = PageManager.TokenizeTemplateLinks(portalID, PageManager.DeTokenizeLinks(baseLayout.ContentJSON, portalID), true, Assets);
                     layout.ContentJSON = BlockManager.RemovePermissions(html, layout.ContentJSON);
                     layout.Content = html.DocumentNode.OuterHtml;
-                    layout.Style = PageManager.TokenizeTemplateLinks(PageManager.DeTokenizeLinks(baseLayout.Style.ToString(), portalID), false, Assets);
-                    layout.StyleJSON = PageManager.TokenizeTemplateLinks(PageManager.DeTokenizeLinks(baseLayout.StyleJSON.ToString(), portalID), true, Assets);
+                    layout.Style = PageManager.TokenizeTemplateLinks(portalID, PageManager.DeTokenizeLinks(baseLayout.Style.ToString(), portalID), false, Assets);
+                    layout.StyleJSON = PageManager.TokenizeTemplateLinks(portalID, PageManager.DeTokenizeLinks(baseLayout.StyleJSON.ToString(), portalID), true, Assets);
                     layout.Type = baseLayout.Type;
                     exportTemplate.Templates.Add(layout);
                     PageManager.ProcessPortableModules(portalID, layout.Content, ExportedModulesContent);
@@ -660,7 +762,7 @@ namespace Vanjaro.UXManager.Extensions.Menu.Pages
                                         {
                                             AddZipItem("Assets/" + FileName, new WebClient().DownloadData(FileUrl), zip);
                                         }
-                                        catch (Exception ex) { ExceptionManager.LogException(ex); }
+                                        catch (Exception ex) {}
                                     }
                                 }
                             }
@@ -690,31 +792,6 @@ namespace Vanjaro.UXManager.Extensions.Menu.Pages
                     }
                 }
             }
-            private static void ProcessBlocks(int PortalId, List<GlobalBlock> Blocks)
-            {
-                if (Blocks != null)
-                {
-                    foreach (GlobalBlock item in Blocks)
-                    {
-                        if (string.IsNullOrEmpty(item.Html) && string.IsNullOrEmpty(item.Css))
-                        {
-                            if (BlockManager.GetCustomByGuid(PortalId, item.Guid) == null)
-                            {
-                                item.ID = 0;
-                                BlockManager.Add(PortalController.Instance.GetCurrentSettings() as PortalSettings, item, 1);
-                            }
-                        }
-                        else
-                        {
-                            if (BlockManager.GetGlobalByLocale(PortalId, item.Guid, null) == null)
-                            {
-                                item.ID = 0;
-                                BlockManager.Add(PortalController.Instance.GetCurrentSettings() as PortalSettings, item, 1);
-                            }
-                        }
-                    }
-                }
-            }
 
             public static ActionResult CopyPage(int DefaultWorkflow, int MaxRevisions, PageSettingLayout PageSettingLayout)
             {
@@ -723,7 +800,7 @@ namespace Vanjaro.UXManager.Extensions.Menu.Pages
                 PageSettingLayout.PageSettings.TabId = 0;
                 PageSettingLayout.PageSettings.Url = string.Empty;
                 PortalSettings portalSettings = PortalController.Instance.GetCurrentSettings() as PortalSettings;
-                ActionResult Response = PagesManager.SavePageDetails(DefaultWorkflow, MaxRevisions, PageSettingLayout);
+                ActionResult Response = PagesManager.SavePageDetails(portalSettings, DefaultWorkflow, MaxRevisions, PageSettingLayout);
                 if (Response.IsSuccess)
                 {
                     foreach (string Locale in Core.Managers.PageManager.GetCultureListItems())
@@ -909,13 +986,15 @@ namespace Vanjaro.UXManager.Extensions.Menu.Pages
                         //RoleID=-1(All Users)
                         bool HasBeenPublished = (c.TabPermissions.Where(t => t != null && t.RoleID == -1 && t.AllowAccess == true).FirstOrDefault() != null) ? true : false;
 
+                        bool IsAnchorPage = c.TabSettings.ContainsKey("AnchorID") && c.DisableLink;
+
                         //Display in Menu Yes and DisbaledLink Yes then page is folder page
-                        bool IsFolder = c.DisableLink;
+                        bool IsFolder = !c.TabSettings.ContainsKey("AnchorID") && c.DisableLink;
                         bool HasEditPermission = TabPermissionController.HasTabPermission(c.TabPermissions, "EDIT");
 
                         if (c.TabID > Null.NullInteger)
                         {
-                            result.Add(new PagesTreeView { HasContent = Core.Managers.PageManager.GetAllTabIdByPortalID(PortalSettings.Current.PortalId).Where(x => x == c.TabID).FirstOrDefault() > 0 ? true : false, label = c.TabName.TrimStart('.'), Value = c.TabID, selected = false, children = tabInfo == null ? GetPageTreeChildrens(c.TabID, portalSettings) : new List<PagesTreeView>(), usedbyCount = 0, PageUrl = c.FullUrl, FolderPage = IsFolder, LinkNewWindow = LinkNewWindow, HasBeenPublished = HasBeenPublished, IsVisible = c.IsVisible, IsRedirectPage = IsRedirectPage, HasEditPermission = HasEditPermission });
+                            result.Add(new PagesTreeView { HasContent = Core.Managers.PageManager.GetAllTabIdByPortalID(PortalSettings.Current.PortalId).Where(x => x == c.TabID).FirstOrDefault() > 0 ? true : false, label = c.TabName.TrimStart('.'), Value = c.TabID, selected = false, children = tabInfo == null ? GetPageTreeChildrens(c.TabID, portalSettings) : new List<PagesTreeView>(), usedbyCount = 0, PageUrl = c.FullUrl, FolderPage = IsFolder, LinkNewWindow = LinkNewWindow, HasBeenPublished = HasBeenPublished, IsVisible = c.IsVisible, IsRedirectPage = IsRedirectPage, HasEditPermission = HasEditPermission, IsAnchorPage = IsAnchorPage });
                         }
                     }
                 }
@@ -1089,11 +1168,17 @@ namespace Vanjaro.UXManager.Extensions.Menu.Pages
                     bool LinkNewWindow = c.TabSettings.ContainsKey("LinkNewWindow") ? Convert.ToBoolean(c.TabSettings["LinkNewWindow"]) : false;
                     //RoleID=-1(All Users)
                     bool HasBeenPublished = (c.TabPermissions.Where(t => t != null && t.RoleID == -1 && t.AllowAccess == true).FirstOrDefault() != null) ? true : false;
+
+                    bool IsAnchorPage = c.TabSettings.ContainsKey("AnchorID") && c.DisableLink;
+
+                    //Display in Menu Yes and DisbaledLink Yes then page is folder page
+                    bool IsFolder = !c.TabSettings.ContainsKey("AnchorID") && c.DisableLink;
+
                     bool HasEditPermission = TabPermissionController.HasTabPermission(c.TabPermissions, "EDIT");
 
                     if (PageTreeChildrens != null && PageTreeChildrens.Count > 0)
                     {
-                        result.Add(new PagesTreeView { HasContent = Core.Managers.PageManager.GetAllTabIdByPortalID(PortalSettings.Current.PortalId).Where(x => x == c.TabID).FirstOrDefault() > 0 ? true : false, label = c.TabName.TrimStart('.'), Value = c.TabID, selected = false, children = GetPageTreeChildrens(c.TabID, portalSettings), usedbyCount = 0, PageUrl = c.FullUrl, FolderPage = c.DisableLink, LinkNewWindow = LinkNewWindow, HasBeenPublished = HasBeenPublished, IsVisible = c.IsVisible, IsRedirectPage = IsRedirectPage, HasEditPermission = HasEditPermission });
+                        result.Add(new PagesTreeView { HasContent = Core.Managers.PageManager.GetAllTabIdByPortalID(PortalSettings.Current.PortalId).Where(x => x == c.TabID).FirstOrDefault() > 0 ? true : false, label = c.TabName.TrimStart('.'), Value = c.TabID, selected = false, children = GetPageTreeChildrens(c.TabID, portalSettings), usedbyCount = 0, PageUrl = c.FullUrl, FolderPage = IsFolder, LinkNewWindow = LinkNewWindow, HasBeenPublished = HasBeenPublished, IsVisible = c.IsVisible, IsRedirectPage = IsRedirectPage, HasEditPermission = HasEditPermission, IsAnchorPage = IsAnchorPage });
                     }
                 }
                 return result;

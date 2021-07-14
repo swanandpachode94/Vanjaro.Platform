@@ -6,7 +6,7 @@
 
     };
     $scope.Click_New = function () {
-        parent.OpenPopUp(null, 800, 'right', 'Add New Site', "#!/add");
+        parent.OpenPopUp(null, '100%', 'center', '[L:AddNewSite]', "#!/choosetemplate", '100%', true, false, null, false);
     };
     $scope.Click_SiteGroup = function () {
         event.preventDefault();
@@ -105,13 +105,7 @@
             });
     };
     $scope.Click_View = function (row) {
-        var link = '';
-        if (row.IsVjToursGuided)
-            link = row.PortalAliases[0].link;
-        else {
-            link = row.PortalAliases[0].link + '?uxm=open';
-            row.IsVjToursGuided = true;
-        }
+        var link = row.PortalAliases[0].link + '?uxm=open';
         window.parent.open(link, '_blank');
     };
 });

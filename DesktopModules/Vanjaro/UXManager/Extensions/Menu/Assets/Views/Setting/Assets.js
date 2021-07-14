@@ -183,7 +183,7 @@
         //$("uiengine #permDiv").on("hidden.bs.modal", function (e) {
         //    $('uiengine .PermissionFrame').attr('src', 'about:blank');
         //});
-        window.parent.OpenPopUp(null, 700, 'centre', 'Permissions', window.location.href + '#!/permission/' + folder.Value, 850, '');
+        window.parent.OpenPopUp(null, 700, 'centre', 'Permissions', window.location.href.split('#')[0] + '#!/permission/' + folder.Value, 850, '');
     };
 
     $scope.RenameFolder = function (folderid, foldername) {
@@ -313,7 +313,7 @@
             $('.cpymv').text('[LS:Move]');
         else
             $('.cpymv').text('[LS:Copy]');
-        $('uiengine #movefolder').modal({ keyboard: false });
+        $('uiengine #movefolder').modal('show', { keyboard: false });
         $("uiengine #movefolder").on("shown.bs.modal", function (e) {
             var DestinationFolderID = -1;
             if ($scope.IconsFolders !== undefined && $scope.IconsFolders[0] !== undefined)
@@ -688,7 +688,6 @@
         $scope.ShowErrorMessage = false;
         $('.ShowErrorMessage').hide();
         $('.NewFolderName').val("");
-        $('.FolderType').val("0");
         $('uiengine #CreateFolder').modal('show', { keyboard: false });
     };
 

@@ -66,42 +66,48 @@ export default grapesjs.plugins.add('blockwrapper', (editor, opts = {}) => {
 			}),
 			init() {
 
-				//Trait - Alignment
-				if (typeof this.getTrait() == "undefined" && typeof this.getAttributes()["data-block-alignment"] != 'undefined' && this.getAttributes()["data-block-alignment"] == "true") {
-					this.addTrait({
-						label: "Alignment",
-						type: "toggle_checkbox",
-						name: "alignment",
-						UpdateStyles: true,
-						cssproperties: [{ name: "text-align" }],
-						options: [
-							{ id: 'left', name: 'left', image: 'align-left' },
-							{ id: 'center', name: 'center', image: 'align-center' },
-							{ id: 'right', name: 'right', image: 'align-right' },
-						],
-						default: "none"
-					});
-				}
+				//Trait
+				if (!this.attributes.traits.length) {
 
-				if (typeof this.getTrait() == "undefined" && typeof this.getAttributes()["data-block-styles"] != 'undefined' && this.getAttributes()["data-block-styles"] == "true") {
+					//Alignment
+					if (typeof this.getAttributes()["data-block-alignment"] != 'undefined' && this.getAttributes()["data-block-alignment"] == "true") {
 
-					var blockName = this.getAttributes()['data-block-type'].replace(/\s+/g, '-').toLowerCase();
+						this.addTrait({
+							label: "Alignment",
+							type: "toggle_checkbox",
+							name: "alignment",
+							UpdateStyles: true,
+							cssproperties: [{ name: "text-align" }],
+							options: [
+								{ id: 'left', name: 'left', image: 'align-left' },
+								{ id: 'center', name: 'center', image: 'align-center' },
+								{ id: 'right', name: 'right', image: 'align-right' },
+							],
+							default: "none"
+						});
+					}
 
-					this.addTrait({
-						label: 'Styles',
-						name: 'styles',
-						type: 'preset_radio',
-						options: [
-							{ id: '' + blockName + '-style-1', name: 'Style 1', class: '' + blockName + '-style-1' },
-							{ id: '' + blockName + '-style-2', name: 'Style 2', class: '' + blockName + '-style-2' },
-							{ id: '' + blockName + '-style-3', name: 'Style 3', class: '' + blockName + '-style-3' }
-						],
-						default: 'Style 1'
-					});
+					//Styles
+					if (typeof this.getAttributes()["data-block-styles"] != 'undefined' && this.getAttributes()["data-block-styles"] == "true") {
+
+						var blockName = this.getAttributes()['data-block-type'].replace(/\s+/g, '-').toLowerCase();
+
+						this.addTrait({
+							label: 'Styles',
+							name: 'styles',
+							type: 'preset_radio',
+							options: [
+								{ id: '' + blockName + '-style-1', name: 'Style 1', class: '' + blockName + '-style-1' },
+								{ id: '' + blockName + '-style-2', name: 'Style 2', class: '' + blockName + '-style-2' },
+							],
+							default: 'Style 1'
+						});
+					}
 				}
 
 				//Resizable
 				if (typeof this.getAttributes()["data-block-resizable"] != 'undefined' && this.getAttributes()["data-block-resizable"] == "true") {
+					IsVJEditorSaveCall = false;
 					this.set({
 						'resizable': {
 							ratioDefault: 1,
@@ -111,38 +117,31 @@ export default grapesjs.plugins.add('blockwrapper', (editor, opts = {}) => {
 							bc: 0,
 							onMove: function (e) {
 								var SelectedCol = VjEditor.getSelected();
-								if (SelectedCol.getName() == 'Logo') {
-									var width = $(SelectedCol.getEl()).width();
-									var height = $(SelectedCol.getEl()).height();
-									var attr = SelectedCol.getAttributes();
-									attr['data-style'] = 'width:' + width + 'px; height:' + height + 'px;';
-									SelectedCol.setAttributes(attr);
-									$(SelectedCol.getEl()).find('img').css('width', width).css('height', height);
-									SelectedCol.removeStyle('width');
-									SelectedCol.removeStyle('height');
-								}
+								if (SelectedCol.getName() == 'Logo')
+									$(SelectedCol.getEl()).find('img').removeAttr('style');
 							},
 							onEnd: function (e) {
 								var SelectedCol = VjEditor.getSelected();
 								if (SelectedCol.getName() == 'Logo') {
-									SelectedCol.removeStyle('width');
-									SelectedCol.removeStyle('height');
-									var img = SelectedCol.getEl().innerHTML;
-									SelectedCol.set('content', img);
+									const attr = SelectedCol.getAttributes();
+									delete attr['data-style'];
+									SelectedCol.setAttributes(attr);
 								}
 							}
 						}
 					});
+					setTimeout(function () {
+						IsVJEditorSaveCall = true;
+					}, 1000);
 				}
 			},
-		},
-			{
-				isComponent: function (el) {
-					if (el.tagName == 'div' || el.tagName == 'DIV' && (el.attributes["data-block-type"] != undefined)) {
-						return { type: 'blockwrapper' };
-					}
+		}, {
+			isComponent: function (el) {
+				if (el.tagName == 'div' || el.tagName == 'DIV' && (el.attributes["data-block-type"] != undefined)) {
+					return { type: 'blockwrapper' };
 				}
-			}),
+			}
+		}),
 		view: defaultView.extend({
 			render: function () {
 
@@ -275,16 +274,15 @@ export default grapesjs.plugins.add('blockwrapper', (editor, opts = {}) => {
 				selectable: true,
 				hoverable: IsAdmin
 			}),
-		},
-			{
-				isComponent: function (el) {
-					if (el.tagName == 'div' || el.tagName == 'DIV' && (el.attributes["data-block-type"] != undefined && el.attributes["data-block-type"].value.toLowerCase() == 'global')) {
-						return {
-							type: 'globalblockwrapper'
-						};
-					}
+		}, {
+			isComponent: function (el) {
+				if (el.tagName == 'div' || el.tagName == 'DIV' && (el.attributes["data-block-type"] != undefined && el.attributes["data-block-type"].value.toLowerCase() == 'global')) {
+					return {
+						type: 'globalblockwrapper'
+					};
 				}
-			}),
+			}
+		}),
 		view: defaultType.view.extend({
 			render: function () {
 				defaultType.view.prototype.render.apply(this, arguments);
@@ -351,7 +349,7 @@ export default grapesjs.plugins.add('blockwrapper', (editor, opts = {}) => {
 								$(v.view.$el[0]).find('img').attr('style', style);
 							}
 						}
-					})
+					});
 				}
 				StyleGlobal(this.model);
 				return this;
