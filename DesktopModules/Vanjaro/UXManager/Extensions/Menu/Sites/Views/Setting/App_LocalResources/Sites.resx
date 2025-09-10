@@ -117,6 +117,12 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="AddNewSite.Text" xml:space="preserve">
+    <value>Add New Site</value>
+  </data>
+  <data name="ChooseTemplate.Text" xml:space="preserve">
+    <value>Choose Template</value>
+  </data>
   <data name="Delete.Text" xml:space="preserve">
     <value>Delete</value>
   </data>
@@ -134,6 +140,9 @@
   </data>
   <data name="Portals_Columns_Setting.Text" xml:space="preserve">
     <value> </value>
+  </data>
+  <data name="Portals_Search.Text" xml:space="preserve">
+    <value>Search</value>
   </data>
   <data name="SiteGroup.Text" xml:space="preserve">
     <value>Site Group</value>

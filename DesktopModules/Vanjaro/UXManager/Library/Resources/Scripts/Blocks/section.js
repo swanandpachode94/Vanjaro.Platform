@@ -23,11 +23,10 @@
 
 	let domc = editor.DomComponents;
 	const defaultType = domc.getType('default');
-	const defaultModel = defaultType.model;
 	const defaultView = defaultType.view;
 
 	domc.addType('section', {
-		model: defaultModel.extend({
+		model: {
 			initToolbar() {
 				var model = this;
 				if (!model.get('toolbar')) {
@@ -35,7 +34,7 @@
 					var GetBlockMenus = function () {
 						var Result = [];
 						if (IsAdmin)
-                            Result.push({ 'Title': VjLocalized.SaveBlock, 'Command': 'custom-block' });
+							Result.push({ 'Title': VjLocalized.SaveBlock, 'Command': 'custom-block' });
 						return Result;
 					};
 
@@ -43,7 +42,7 @@
 
 					if (GetBlockMenus().length > 0) {
 						tb.push({
-                            attributes: { class: 'fa fa-bars', title: VjLocalized.Menu },
+							attributes: { class: 'fa fa-bars', title: VjLocalized.Menu },
 							command: function (t) {
 								return t.runCommand("tlb-app-actions", {
 									BlockMenus: GetBlockMenus()
@@ -76,7 +75,7 @@
 					}
 
 					tb.push({
-                        attributes: { class: 'fa fa-cog', title: VjLocalized.Settings },
+						attributes: { class: 'fa fa-cog', title: VjLocalized.Settings },
 						command: 'tlb-app-personalization',
 					});
 
@@ -90,7 +89,7 @@
 					model.set('toolbar', tb);
 				}
 			},
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+			defaults: {
 				droppable: true,
 				tagName: 'section',
 				resizable: {
@@ -102,155 +101,171 @@
 					br: 0, // Bottom right
 					keyHeight: 'min-height',
 				},
-				traits: [{
-					label: "Id",
-					name: "id",
-					type: 'text',
-				}, {
-					label: "Type",
-					name: "tag",
-					type: 'select',
-					options: [
-						{ id: 'article', name: 'Article' },
-						{ id: 'div', name: 'Div' },
-						{ id: 'footer', name: 'Footer' },
-						{ id: 'header', name: 'Header' },
-						{ id: 'section', name: 'Section' },
-					],
-					default: 'section',
-					changeProp: 1,
-				}, {
-					label: "Background",
-					name: "background",
-					type: "toggle_radio",
-					SwitchClass: true,
-					options: [
-						{ id: 'none', name: 'none', icon: "fas fa-ban", class: '' },
-						{ id: 'image', name: 'image', icon: "fas fa-paint-brush", class: '' },
-						{ id: 'gradient', name: 'gradient', icon: "fas fa-fill", class: '' },
-						{ id: 'video', name: 'video', icon: "fas fa-video", class: '' },
-					],
-					default: 'none',
-					changeProp: 1,
-				}, {
-					label: "Color",
-					name: "backgroundcolor",
-					type: "custom_color",
-					cssproperties: [{ name: "background-color" }],
-					options: [
-						{ id: 'colorprimary', color: 'bg-primary', name: 'Primary', class: 'bg-primary' },
-						{ id: 'colorsecondary', color: 'bg-secondary', name: 'Secondary', class: 'bg-secondary' },
-						{ id: 'colortertiary', color: 'bg-tertiary', name: 'Tertiary', class: 'bg-tertiary' },
-						{ id: 'colorquaternary', color: 'bg-quaternary', name: 'Quaternary', class: 'bg-quaternary' },
-						{ id: 'colorsuccess', color: 'bg-success', name: 'Success', class: 'bg-success' },
-						{ id: 'colorinfo', color: 'bg-info', name: 'Info', class: 'bg-info' },
-						{ id: 'colorwarning', color: 'bg-warning', name: 'Warning', class: 'bg-warning' },
-						{ id: 'colordanger', color: 'bg-danger', name: 'Danger', class: 'bg-danger' },
-						{ id: 'colorlight', color: 'bg-light', name: 'Light', class: 'bg-light' },
-						{ id: 'colordark', color: 'bg-dark', name: 'Dark', class: 'bg-dark' }
-					],
-					default: "primary",
-					changeProp: 1,
-				}, {
-					label: " ",
-					name: "backgroundimage",
-					type: "uploader",
-					changeProp: 1,
-				}, {
-					label: " ",
-					name: "backgroundvideo",
-					type: "uploader",
-					changeProp: 1,
-				}, {
-					label: "Position",
-					name: "imageposition",
-					type: 'dropdown',
-					cssproperties: [{ name: "background-position" }],
-					options: [
-						{ id: 'top left', name: 'Top Left' },
-						{ id: 'top center', name: 'Top Center' },
-						{ id: 'top right', name: 'Top Right' },
-						{ id: 'center left', name: 'Middle Left' },
-						{ id: 'center center', name: 'Middle Center' },
-						{ id: 'center right', name: 'Middle Right' },
-						{ id: 'bottom left', name: 'Bottom Left' },
-						{ id: 'bottom center', name: 'Bottom Center' },
-						{ id: 'bottom right', name: 'Bottom Right' },
-					],
-					default: 'center center',
-					changeProp: 1,
-				}, {
-					label: "Attachment",
-					name: "imageattachment",
-					type: 'dropdown',
-					cssproperties: [{ name: "background-attachment" }],
-					options: [
-						{ id: 'scroll', name: 'Scroll' },
-						{ id: 'fixed', name: 'Fixed' },
-					],
-					default: 'scroll',
-					changeProp: 1,
-				}, {
-					label: "Repeat",
-					name: "imagerepeat",
-					type: 'dropdown',
-					cssproperties: [{ name: "background-repeat" }],
-					options: [
-						{ id: 'no-repeat', name: 'No-repeat' },
-						{ id: 'repeat', name: 'Repeat' },
-						{ id: 'repeat-x', name: 'Repeat-x' },
-						{ id: 'repeat-y', name: 'Repeat-y' },
-					],
-					default: 'no-repeat',
-					changeProp: 1,
-				}, {
-					label: "Size",
-					name: "imagesize",
-					type: 'dropdown',
-					cssproperties: [{ name: "background-size" }],
-					options: [
-						{ id: 'auto', name: 'Auto' },
-						{ id: 'cover', name: 'Cover' },
-						{ id: 'contain', name: 'Contain' },
-					],
-					default: 'auto',
-					changeProp: 1,
-				}, {
-					label: "Gradient",
-					name: 'gradient',
-					property: 'background-image',
-					type: 'gradient',
-				}, {
-					label: "Type",
-					name: "gradienttype",
-					type: "toggle_radio",
-					SwitchClass: true,
-					options: [
-						{ id: 'linear', name: 'linear', class: '' },
-						{ id: 'radial', name: 'radial', class: '' },
-					],
-					default: 'linear',
-					changeProp: 1,
-				}, {
-					label: "Angle",
-					name: "angle",
-					type: "custom_range",
-					min: "0",
-					max: "360",
-					default: "90",
-					changeProp: 1,
-				}]
-			}),
+				traits: [
+					{
+						label: "Type",
+						name: "tag",
+						type: 'select',
+						options: [
+							{ id: 'article', name: 'Article' },
+							{ id: 'div', name: 'Div' },
+							{ id: 'footer', name: 'Footer' },
+                            { id: 'header', name: 'Header' },
+                            { id: 'nav', name: 'Nav' },
+							{ id: 'section', name: 'Section' },
+						],
+						default: 'section',
+						changeProp: 1,
+					}, {
+						label: 'Alignment',
+						name: 'alignment',
+						type: 'toggle_radio',
+						UpdateStyles: true,
+						cssproperties: [{ name: "text-align" }],
+						options: [
+							{ id: 'left', name: 'left', image: 'align-left' },
+							{ id: 'center', name: 'center', image: 'align-center' },
+							{ id: 'right', name: 'right', image: 'align-right' },
+						],
+						default: 'left',
+						changeProp: 1,
+					}, {
+						label: "Background",
+						name: "background",
+						type: "toggle_radio",
+						SwitchClass: true,
+						options: [
+							{ id: 'none', name: 'none', icon: "fas fa-ban", class: '' },
+							{ id: 'image', name: 'image', icon: "fas fa-paint-brush", class: '' },
+							{ id: 'gradient', name: 'gradient', icon: "fas fa-fill", class: '' },
+							{ id: 'video', name: 'video', icon: "fas fa-video", class: '' },
+						],
+						default: 'none',
+						changeProp: 1,
+					}, {
+						label: "Color",
+						name: "backgroundcolor",
+						type: "custom_color",
+						cssproperties: [{ name: "background-color" }],
+						options: [
+							{ id: 'colorprimary', color: 'bg-primary', name: 'Primary', class: 'bg-primary' },
+							{ id: 'colorsecondary', color: 'bg-secondary', name: 'Secondary', class: 'bg-secondary' },
+							{ id: 'colortertiary', color: 'bg-tertiary', name: 'Tertiary', class: 'bg-tertiary' },
+							{ id: 'colorquaternary', color: 'bg-quaternary', name: 'Quaternary', class: 'bg-quaternary' },
+							{ id: 'colorsuccess', color: 'bg-success', name: 'Success', class: 'bg-success' },
+							{ id: 'colorinfo', color: 'bg-info', name: 'Info', class: 'bg-info' },
+							{ id: 'colorwarning', color: 'bg-warning', name: 'Warning', class: 'bg-warning' },
+							{ id: 'colordanger', color: 'bg-danger', name: 'Danger', class: 'bg-danger' },
+							{ id: 'colorlight', color: 'bg-light', name: 'Light', class: 'bg-light' },
+							{ id: 'colordark', color: 'bg-dark', name: 'Dark', class: 'bg-dark' }
+						],
+						default: "primary",
+						changeProp: 1,
+					}, {
+						label: " ",
+						name: "backgroundimage",
+						type: "uploader",
+						changeProp: 1,
+					}, {
+						label: " ",
+						name: "backgroundvideo",
+						type: "uploader",
+						changeProp: 1,
+					}, {
+						label: "Position",
+						name: "imageposition",
+						type: 'dropdown',
+						cssproperties: [{ name: "background-position" }],
+						options: [
+							{ id: 'top left', name: 'Top Left' },
+							{ id: 'top center', name: 'Top Center' },
+							{ id: 'top right', name: 'Top Right' },
+							{ id: 'center left', name: 'Middle Left' },
+							{ id: 'center center', name: 'Middle Center' },
+							{ id: 'center right', name: 'Middle Right' },
+							{ id: 'bottom left', name: 'Bottom Left' },
+							{ id: 'bottom center', name: 'Bottom Center' },
+							{ id: 'bottom right', name: 'Bottom Right' },
+						],
+						default: 'center center',
+						changeProp: 1,
+					}, {
+						label: "Attachment",
+						name: "imageattachment",
+						type: 'dropdown',
+						cssproperties: [{ name: "background-attachment" }],
+						options: [
+							{ id: 'scroll', name: 'Scroll' },
+							{ id: 'fixed', name: 'Fixed' },
+						],
+						default: 'scroll',
+						changeProp: 1,
+					}, {
+						label: "Repeat",
+						name: "imagerepeat",
+						type: 'dropdown',
+						cssproperties: [{ name: "background-repeat" }],
+						options: [
+							{ id: 'no-repeat', name: 'No-repeat' },
+							{ id: 'repeat', name: 'Repeat' },
+							{ id: 'repeat-x', name: 'Repeat-x' },
+							{ id: 'repeat-y', name: 'Repeat-y' },
+						],
+						default: 'no-repeat',
+						changeProp: 1,
+					}, {
+						label: "Size",
+						name: "imagesize",
+						type: 'dropdown',
+						cssproperties: [{ name: "background-size" }],
+						options: [
+							{ id: 'auto', name: 'Auto' },
+							{ id: 'cover', name: 'Cover' },
+							{ id: 'contain', name: 'Contain' },
+						],
+						default: 'auto',
+						changeProp: 1,
+					}, {
+						label: "Gradient",
+						name: 'gradient',
+						property: 'background-image',
+						type: 'gradient',
+					}, {
+						label: "Type",
+						name: "gradienttype",
+						type: "toggle_radio",
+						SwitchClass: true,
+						options: [
+							{ id: 'linear', name: 'linear', class: '' },
+							{ id: 'radial', name: 'radial', class: '' },
+						],
+						default: 'linear',
+						changeProp: 1,
+					}, {
+						label: "Angle",
+						name: "angle",
+						type: "custom_range",
+						min: "0",
+						max: "360",
+						default: "90",
+						changeProp: 1,
+					}, {
+						label: "Id",
+						name: "id",
+						type: 'text',
+					}
+				]
+			},
 			init() {
 				this.listenTo(this, 'change:tag', this.handleTypeChange);
 				this.listenTo(this, 'change:gradient', this.handleGradientChange);
 			},
 			handleTypeChange() {
-                if (typeof this.attributes.tag != 'undefined' && this.attributes.tag != "") {
-                    this.attributes.tagName = this.attributes.tag;
-                    this.view.reset();
-                    VjEditor.runCommand("save");
-                }
+				if (typeof this.attributes.tag != 'undefined' && this.attributes.tag != "") {
+					this.attributes.tagName = this.attributes.tag;
+					this.view.reset();
+					VjEditor.runCommand("save");
+				}
 			},
 			handleGradientChange() {
 				if (typeof this.attributes.gradient != 'undefined' && this.attributes.gradient != "") {
@@ -261,19 +276,14 @@
 				}
 			},
 		},
-			{
+		
 				isComponent(el) {
-					if (el && el.tagName && (el.tagName.toLowerCase() == 'section' || el.tagName.toLowerCase() == 'header' || el.tagName.toLowerCase() == 'footer' || (el.tagName.toLowerCase() == 'nav' && el.classList && !el.classList.contains('nav-breadcrumb')) || el.tagName.toLowerCase() == 'article')) {
+                    if (el && el.classList && el.classList.contains('vj-section')) {
 						return { type: 'section' };
 					}
 				}
-			}),
-		view: defaultView.extend({
-			onRender() {
-				var hasClass = this.model.getClasses().find(v => v == 'vj-section')
-				if (typeof hasClass == 'undefined')
-					this.model.addClass('vj-section');
-			},
+		,
+		view: {			
 			init() {
 				this.listenTo(this.model, 'change:src', this.ChangeSrc);
 			},
@@ -295,8 +305,8 @@
 					}
 					else if (this.model.attributes.background == "video") {
 
-						this.model.components().forEach(item => item.getAttributes()["data-bg-video"] == "true" ? item.remove() : null);
-						this.model.append("<video src=" + this.model.attributes.src + " data-gjs-layerable='false' data-gjs-clickable='false' data-gjs-selectable='false' data-gjs-hoverable='false' data-gjs-draggable='false' data-gjs-droppable='false' data-bg-video='true' class='bg-video' autoplay loop muted></video>", { at: 0 });
+						this.model.components().forEach(item => (typeof item != 'undefined' && item.getAttributes()["data-bg-video"] == "true") ? item.remove() : null);
+                        this.model.append("<video src=" + this.model.attributes.src + " data-gjs-layerable='false' data-gjs-clickable='false' data-gjs-selectable='false' data-gjs-hoverable='false' data-gjs-draggable='false' data-gjs-droppable='false' data-bg-video='true' class='bg-video' playsinline autoplay loop muted></video>", { at: 0 });
 
 						this.model.components().forEach(item => {
 							item.getAttributes()["data-bg-video"] == "true" ? item.set({ 'controls': 0 }) : null
@@ -316,7 +326,6 @@
 				}
 
 			},
-
-		}),
+		},
 	});
 }

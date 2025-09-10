@@ -9,7 +9,7 @@
 			attributes: { class: 'fa fa-youtube-play' },
 			content: `
 				<div class='video-box embed-container'>
-					<video controls class='vj-video' src='`+ VjDefaultPath + `Flower.mp4'></video>
+					<video controls src='`+ VjDefaultPath + `Flower.mp4' data-gjs-clickable="false" data-gjs-selectable="false" data-gjs-hoverable="false" data-gjs-draggable="false" data-gjs-droppable="false" data-gjs-layerable="false"></video>
 				</div>	
 			`,
 			activate: 1
@@ -18,13 +18,12 @@
 
 	let domc = editor.DomComponents;
 
-	const videoType = domc.getType('video');
-	const videoModel = videoType.model;
-	const videoView = videoType.view;
+	const defaultType = domc.getType('default');
+	const defaultView = defaultType.view;
 
-	domc.addType('video', {
-		model: videoModel.extend({
-			defaults: Object.assign({}, videoModel.prototype.defaults, {
+	domc.addType('iframe', {
+		model: {
+			defaults: {
 				droppable: false,
 				draggable: false,
 				hoverable: false,
@@ -32,17 +31,58 @@
 				clickable: false,
 				layerable: false,
 				traits: [],
-			})
-		})
+			}
+		},
+			isComponent(el) {
+				if (el && el.classList && el.classList.contains('frame-box')) {
+					return { type: 'iframe' };
+				}
+			}
+		,
+		view: defaultView
 	});
 
-	const defaultType = domc.getType('default');
-	const defaultModel = defaultType.model;
-	const defaultView = defaultType.view;
-
 	domc.addType('videobox', {
-		model: defaultModel.extend({
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+		model: {
+			initToolbar() {
+				var model = this;
+				if (!model.get('toolbar')) {
+					var tb = [];
+
+					tb.push({
+						attributes: { class: 'fa fa-arrow-up' },
+						command: function (t) {
+							return t.runCommand("core:component-exit", {
+								force: 1
+							})
+						}
+					});
+
+					if (model.get('draggable')) {
+						tb.push({
+							attributes: { class: 'fa fa-arrows' },
+							command: 'tlb-move',
+						});
+					}
+
+					if (model.get('copyable')) {
+						tb.push({
+							attributes: { class: 'fa fa-clone' },
+							command: 'tlb-clone',
+						});
+					}
+
+					if (model.get('removable')) {
+						tb.push({
+							attributes: { class: 'fa fa-trash-o' },
+							command: 'tlb-delete',
+						});
+					}
+
+					model.set('toolbar', tb);
+				}
+			},
+			defaults: {
 				'custom-name': 'Video',
 				droppable: false,
 				resizable: {
@@ -59,7 +99,7 @@
 				},
 				attributes: { allowfullscreen: 'allowfullscreen' },
 				traits: [],
-			}),
+			},
 			init() {
 				var traits = [];
 				var prov = this.attributes.provider;
@@ -72,6 +112,9 @@
 						traits = this.getSourceTraits();
 				}
 				this.set('traits', traits);
+
+				if (typeof prov == "undefined")
+					this.set('provider', 'so')
 
 				this.listenTo(this, 'change:provider', this.ChangeProvider);
 				this.listenTo(this, 'change:videoId', this.ChangeVideoId);
@@ -184,15 +227,19 @@
 
 			ChangeProvider() {
 
+				let traits;
+
 				if (this.attributes.provider == "yt") {
-					this.components().models[0].replaceWith('<iframe src="https://www.youtube.com/embed/"></iframe>');
-					this.loadTraits(this.getYoutubeTraits());
+					this.components().models[0].replaceWith('<iframe class="frame-box" src="https://www.youtube.com/embed/"></iframe>');
+					traits = this.getYoutubeTraits();
+					this.set({ traits });
 					this.components().models[0].set({ 'rel': 0, 'logo': 0 });
 					this.set({ 'src': 'https://www.youtube.com/embed/' });
 				}
 				else {
 					this.components().models[0].replaceWith('<video src="' + VjDefaultPath + 'Flower.mp4"></video>');
-					this.loadTraits(this.getSourceTraits());
+					traits = this.getSourceTraits();
+					this.set({ traits });
 					this.set({ 'src': '' + VjDefaultPath + 'Flower.mp4' });
 					this.getTrait('controls').setTargetValue('controlstrue');
 				}
@@ -256,18 +303,17 @@
 					this.set({ 'src': src });
 					this.components().models[0].set({ 'src': src, 'controls': 1 });
 					this.components().models[0].addAttributes({ 'allow': 'autoplay' });
-					$(this.components().models[0].getEl()).find('iframe').attr('src', src);
+					
 				}
 			}
 		},
-			{
-				isComponent(el) {
-					if (el && el.classList && el.classList.contains('video-box')) {
-						return { type: 'videobox' };
-					}
+			isComponent(el) {
+				if (el && el.classList && el.classList.contains('video-box')) {
+					return { type: 'videobox' };
 				}
-			}),
-		view: defaultView.extend({
+			}
+		,
+		view: {
 			events: {
 				dblclick: function () {
 					this.ShowVideos();
@@ -282,7 +328,6 @@
 				var url = CurrentExtTabUrl + "&guid=a7a5e633-a33a-4792-8149-bc15b9433505";
 				OpenPopUp(null, 900, 'right', VjLocalized.Video, url, '', true);
 			},
-
-		})
+		}
 	});
 }

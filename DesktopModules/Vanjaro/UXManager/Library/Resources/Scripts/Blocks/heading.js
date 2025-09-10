@@ -17,17 +17,55 @@ export default (editor, config = {}) => {
 
 	let domc = editor.DomComponents;
 	const textType = domc.getType('text');
-	const textModel = textType.model;
 	const textView = textType.view;
 
 	domc.addType('heading', {
-		model: textModel.extend({
-			defaults: Object.assign({}, textModel.prototype.defaults, {
+		model: {
+			initToolbar() {
+				var model = this;
+				if (!model.get('toolbar')) {
+					var tb = [];
+
+					tb.push({
+						attributes: { class: 'fa fa-arrow-up' },
+						command: function (t) {
+							return t.runCommand("core:component-exit", {
+								force: 1
+							})
+						}
+					});
+
+					if (model.get('draggable')) {
+						tb.push({
+							attributes: { class: 'fa fa-arrows' },
+							command: 'tlb-move',
+						});
+					}
+
+					if (model.get('copyable')) {
+						tb.push({
+							attributes: { class: 'fa fa-clone' },
+							command: 'tlb-clone',
+						});
+					}
+
+					if (model.get('removable')) {
+						tb.push({
+							attributes: { class: 'fa fa-trash-o' },
+							command: 'tlb-delete',
+						});
+					}
+
+					model.set('toolbar', tb);
+				}
+			},
+			defaults: {
 				'custom-name': 'Heading',
 				droppable: false,
 				tagName: 'h1',
-                classes: ['vj-heading', 'text-primary', 'head-style-1'],
-                text: true,
+				classes: ['vj-heading', 'text-primary', 'head-style-1'],
+				text: true,
+				editable: true,
 				traits: [
 					{
 						label: 'Importance',
@@ -62,14 +100,14 @@ export default (editor, config = {}) => {
 						name: "fontsize",
 						type: "custom_range",
 						cssproperties: [{ name: "font-size" }],
-                        units: [
-                            { name: 'px', min: 10, max: 100, step: 1, value: 40 },
-                            { name: '%', min: 10, max: 100, step: 1, value: 100 },
-                            { name: 'em', min: 0.5, max: 10, step: 0.1, value: 2 },
-                            { name: 'rem', min: 0.5, max: 10, step: 0.1, value: 2 },
-                            { name: 'vw', min: 0.5, max: 10, step: 0.1, value: 2 },
-                            { name: 'vh', min: 0.5, max: 10, step: 0.1, value: 3 },
-                        ],
+						units: [
+							{ name: 'px', min: 10, max: 100, step: 1, value: 40 },
+							{ name: '%', min: 10, max: 100, step: 1, value: 100 },
+							{ name: 'em', min: 0.5, max: 10, step: 0.1, value: 2 },
+							{ name: 'rem', min: 0.5, max: 10, step: 0.1, value: 2 },
+							{ name: 'vw', min: 0.5, max: 10, step: 0.1, value: 2 },
+							{ name: 'vh', min: 0.5, max: 10, step: 0.1, value: 3 },
+						],
 						unit: "px",
 						changeProp: 1,
 					}, {
@@ -97,49 +135,61 @@ export default (editor, config = {}) => {
 						name: 'styles',
 						type: 'preset_radio',
 						options: [
-							{ id: 'head-style-1', name: 'Style 1', class: 'head-style-1' },
-							{ id: 'head-style-2', name: 'Style 2', class: 'head-style-2' },
-							{ id: 'head-style-3', name: 'Style 3', class: 'head-style-3' },
-							{ id: 'head-style-4', name: 'Style 4', class: 'head-style-4' },
-							{ id: 'head-style-5', name: 'Style 5', class: 'head-style-5' },
-							{ id: 'head-style-6', name: 'Style 6', class: 'head-style-6' },
-							{ id: 'head-style-7', name: 'Style 7', class: 'head-style-7' },
-							{ id: 'head-style-8', name: 'Style 8', class: 'head-style-8' },
-							{ id: 'head-style-9', name: 'Style 9', class: 'head-style-9' },
-							{ id: 'head-style-10', name: 'Style 10', class: 'head-style-10' },
+							{ id: 'head-style-1', name: 'Style 1', class: 'head-style-1', DisplayName: 'A' },
+							{ id: 'head-style-2', name: 'Style 2', class: 'head-style-2', DisplayName: 'B' },
+							{ id: 'head-style-3', name: 'Style 3', class: 'head-style-3', DisplayName: 'C' },
+							{ id: 'head-style-4', name: 'Style 4', class: 'head-style-4', DisplayName: 'D' },
+							{ id: 'head-style-5', name: 'Style 5', class: 'head-style-5', DisplayName: 'E' },
+							{ id: 'head-style-6', name: 'Style 6', class: 'head-style-6', DisplayName: 'F' },
+							{ id: 'head-style-7', name: 'Style 7', class: 'head-style-7', DisplayName: 'G' },
+							{ id: 'head-style-8', name: 'Style 8', class: 'head-style-8', DisplayName: 'H' },
+							{ id: 'head-style-9', name: 'Style 9', class: 'head-style-9', DisplayName: 'I' },
+							{ id: 'head-style-10', name: 'Style 10', class: 'head-style-10', DisplayName: 'J' },
 						],
 						default: 'Style 1',
 						changeProp: 1,
 					}
 				]
-			}),
+			},
 			init() {
 				this.listenTo(this, 'change:importance', this.handleTypeChange);
 			},
 			handleTypeChange() {
 				if (typeof this.attributes.importance != 'undefined' && this.attributes.importance != "") {
 					this.attributes.tagName = this.attributes.importance;
-                    this.view.reset();
-                    this.removeStyle("font-size");
-                    this.getTrait('fontsize').setTargetValue($(this.getEl()).css('font-size').replace(/[^-\d\.]/g, ''));
-                    this.getTrait('fontsize').view.render();
-                    VjEditor.runCommand("save");
+					this.view.reset();
+					this.removeStyle("font-size");
+					this.getTrait('fontsize').setTargetValue($(this.getEl()).css('font-size').replace(/[^-\d\.]/g, ''));
+					this.getTrait('fontsize').view.render();
+					VjEditor.runCommand("save");
 				}
 			},
 		},
-			{
-				isComponent(el) {
-					if (el && ['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(el.tagName)) {
-						return { type: 'heading' };
-					}
+			isComponent(el) {
+				if (el && (el.tagName && (el.tagName.toLowerCase() == 'h1' || el.tagName.toLowerCase() == 'h2' || el.tagName.toLowerCase() == 'h3' || el.tagName.toLowerCase() == 'h4' || el.tagName.toLowerCase() == 'h5' || el.tagName.toLowerCase() == 'h6')) || (el.classList && el.classList.contains('vj-heading'))) {
+					return { type: 'heading' };
 				}
-			}),
+			}
+		,
 		view: textView.extend({
 			onRender() {
-				var hasClass = this.model.getClasses().find(v => v == 'vj-heading' || v == 'text-primary')
-				if (typeof hasClass == 'undefined')
-					this.model.addClass('vj-heading  text-primary');
-			},
+
+				var model = this.model;
+				var trait = model.getTrait('styles');
+
+				if (trait) {
+
+					var Style = model.attributes.styles || 'Style 1';
+					var Option = trait.attributes.options.find(x => x.name === Style);
+					var DisplayName = "";
+
+					if (typeof Option != "undefined")
+						DisplayName = Option.DisplayName;
+
+					if (model.attributes['custom-name'].indexOf(' - ' + DisplayName) == -1)
+						model.set('custom-name', model.getName() + ' - ' + DisplayName);
+				}
+			}
 		})
 	});
 }

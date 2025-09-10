@@ -94,7 +94,9 @@ namespace Vanjaro.UXManager.Extensions.Menu.Users.Controllers
                         userFilters.Remove(userFilters.FirstOrDefault(x => x.Value == Convert.ToInt32(UserFilters.SuperUsers)));
                         userFilters.Insert(userFilters.Count, itemSuperUsers);
 
-                        RecyclebinController.Instance.GetDeletedUsers(out int TotalRecords);
+                        GetUsersContract usersContract = new GetUsersContract { Filter = UserFilters.Deleted };
+                        UsersController.Instance.GetUsers(usersContract, false, out int TotalRecords);
+
                         //IEnumerable<UserItem> deletedusers = from t in users select UserManager.ConvertToUserItem(t);
                         string MemberProfileUrl = string.Empty;
                         if (Library.Managers.MenuManager.GetURL().ToLower().Contains("guid=fa7ca744-1677-40ef-86b2-ca409c5c6ed3"))
@@ -121,7 +123,10 @@ namespace Vanjaro.UXManager.Extensions.Menu.Users.Controllers
                             UserInfo user = DotNetNuke.Entities.Users.UserController.GetUserById(ps.PortalId, UserID);
                             UserBasicDto userDetails = UsersController.Instance.GetUserDetail(ps.PortalId, UserID);
                             ProfileController.GetUserProfile(ref user);
-                            Settings.Add("BrowseUrl", new UIData { Name = "BrowseUrl", Value = Common.Utilities.Utils.BrowseUrl(-1, "Manage") });
+                            Dictionary<string, string> additionalParameters = new Dictionary<string, string>();
+                            additionalParameters.Add("icp=", "true");
+                            additionalParameters.Add("guid=", ExtensionInfo.GUID.ToLower());
+                            Settings.Add("BrowseUrl", new UIData { Name = "BrowseUrl", Value = Common.Utilities.Utils.BrowseUrl(0, true, "", additionalParameters) });
                             Settings.Add("AllowedAttachmentFileExtensions", new UIData { Name = "AllowedAttachmentFileExtensions", Value = FileSetting.FileType });
                             Settings.Add("MaxFileSize", new UIData { Name = "MaxFileSize", Value = FileSetting.FileSize.ToString() });
                             Settings.Add("UserDetails", new UIData { Name = "UserDetails", Options = UserManager.MapUserBasicDto(user, userDetails) });
@@ -143,15 +148,23 @@ namespace Vanjaro.UXManager.Extensions.Menu.Users.Controllers
 
                             List<Entities.ProfileProperties> profileProperties = new List<Entities.ProfileProperties>();
                             ListController listController = new ListController();
-                            foreach (ProfilePropertyDefinition d in user.Profile.ProfileProperties)
+                            foreach (ProfilePropertyDefinition de in user.Profile.ProfileProperties)
                             {
-                                if (Managers.UserManager.CheckAccessLevel(d, user))
+                                if (Managers.UserManager.CheckAccessLevel(de, user))
                                 {
+                                    CopyofProfilePropertyDefinition d = new CopyofProfilePropertyDefinition(de);
+
                                     string ControlType = UserManager.GetControlType(d.DataType);
                                     if (ControlType == "Country" || ControlType == "Region" || ControlType == "List")
                                         d.PropertyValue = string.IsNullOrEmpty(d.PropertyValue) ? "-1" : d.PropertyValue;
+                                    else if (ControlType == "TimeZone")
+                                        d.PropertyValue = string.IsNullOrEmpty(d.PropertyValue) ? PortalSettings.Current.TimeZone.Id : d.PropertyValue;
+                                    else if (ControlType == "Locale")
+                                        d.PropertyValue = string.IsNullOrEmpty(d.PropertyValue) ? PortalSettings.Current.CultureCode : d.PropertyValue;
                                     List<ListEntryInfo> data = listController.GetListEntryInfoItems(d.PropertyName, "", PortalSettings.Current.PortalId).ToList();
-                                    data.Insert(0, new ListEntryInfo { Text = Localization.GetString("NotSpecified", Components.Constants.LocalResourcesFile), Value = d.PropertyValue });
+                                    //Set NotSpecified default value -1 if property value present in the list
+                                    string DefaultValue = data.Where(x => x.Value == d.PropertyValue).FirstOrDefault()?.Value != null ? "-1" : d.PropertyValue;
+                                    data.Insert(0, new ListEntryInfo { Text = Localization.GetString("NotSpecified", Components.Constants.LocalResourcesFile), Value = DefaultValue });
                                     profileProperties.Add(new Entities.ProfileProperties { ProfilePropertyDefinition = d, ListEntries = data });
                                 }
                             }
@@ -488,20 +501,28 @@ namespace Vanjaro.UXManager.Extensions.Menu.Users.Controllers
         {
             ActionResult actionResult = new ActionResult();
             List<Entities.UserItem> userItems = new List<Entities.UserItem>();
-            List<UserInfo> users = RecyclebinController.Instance.GetDeletedUsers(out int totalRecords, pageIndex, pageSize);
+
+            GetUsersContract usersContract = new GetUsersContract { Filter = UserFilters.Deleted };
+            IEnumerable<UserBasicDto> users = UsersController.Instance.GetUsers(usersContract, false, out int totalRecords);
+
             if (users != null && actionResult.IsSuccess)
             {
                 if (!string.IsNullOrEmpty(searchText))
                 {
                     userItems = (from t in users
-                                 where t.Username.Contains(searchText) || t.DisplayName.Contains(searchText) || t.Email.Contains(searchText)
-                                 select UserManager.ConvertToUserItem(t)).ToList();
+                                 where t.Username.Contains(searchText) || t.Displayname.Contains(searchText) || t.Email.Contains(searchText)
+                                 let userInfo = DotNetNuke.Entities.Users.UserController.GetUserById(PortalSettings.Current.PortalId, t.UserId)
+                                 where userInfo != null
+                                 select UserManager.ConvertToUserItem(userInfo)).ToList();
                     totalRecords = userItems.Count();
 
                 }
                 else
                 {
-                    userItems = (from t in users select UserManager.ConvertToUserItem(t)).ToList();
+                    userItems = (from t in users
+                                 let userInfo = DotNetNuke.Entities.Users.UserController.GetUserById(PortalSettings.Current.PortalId, t.UserId)
+                                 where userInfo != null
+                                 select UserManager.ConvertToUserItem(userInfo)).ToList();
                 }
 
                 var response = new

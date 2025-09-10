@@ -2,30 +2,6 @@
     height: 100vh;
 }
 
-/*#Body,
-#Body > form,
-#toast-container {
-    margin: 0;
-    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
-}*/
-
-/*.btn.btn-primary {
-    background-color: #0088cc;
-    border-color: #0088cc;
-    color: #fff;
-}
-
-    .btn.btn-primary:hover {
-        border-color: #0099e6 #0099e6 #0077b3;
-        background-color: #0099e6;
-    }
-
-    .btn.btn-primary:active,
-    .btn.btn-primary:focus {
-        border-color: #0077b3 #0077b3 #0077b3;
-        background-color: #0077b3;
-    }*/
-
 #StyleToolManager {
     display: none;
     font-family: sans-serif;
@@ -77,6 +53,7 @@ li.openbtn {
     position: absolute;
     top: 0;
     bottom: 0;
+    left: 0;
     right: 0;
     width: 100% !important;
     height: 100% !important;
@@ -151,7 +128,7 @@ li.openbtn {
 /*Scrollbar*/
 
 
-.scrollbar::-webkit-scrollbar, .jsPanel-content::-webkit-scrollbar, #wrapper::-webkit-scrollbar {
+.scrollbar::-webkit-scrollbar, .jsPanel-content::-webkit-scrollbar, [data-gjs-type="wrapper"]::-webkit-scrollbar {
     margin-top: 10px;
     height: 10px;
     width: 8px;
@@ -159,7 +136,7 @@ li.openbtn {
 
 .scrollbar::-webkit-scrollbar-track,
 .jsPanel-content::-webkit-scrollbar-track,
-#wrapper::-webkit-scrollbar-track {
+[data-gjs-type="wrapper"]::-webkit-scrollbar-track {
     /*-webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);*/
     border-radius: 10px;
     opacity: 0.8;
@@ -167,13 +144,13 @@ li.openbtn {
 
 .scrollbar::-webkit-scrollbar-track-piece,
 .jsPanel-content::-webkit-scrollbar-track-piece,
-#wrapper::-webkit-scrollbar-track-piece {
+[data-gjs-type="wrapper"]::-webkit-scrollbar-track-piece {
     background: rgba(255, 255, 255, 0);
 }
 
 .scrollbar::-webkit-scrollbar-thumb,
 .jsPanel-content::-webkit-scrollbar-thumb,
-#wrapper::-webkit-scrollbar-thumb {
+[data-gjs-type="wrapper"]::-webkit-scrollbar-thumb {
     border-radius: 10px;
     background: rgba(170, 170, 170, 0.3);
     outline: none;
@@ -381,25 +358,22 @@ div#MenuSettings .parent-menu-hide {
     position: absolute;
     left: 300px;
     top: 50%;
-    width: 18px;
-    height: 50px;
+    width: 36px;
+    height: 100px;
     transform: translateY(-50%);
     background: #0088cc;
     color: #e6e9ec;
-    font-size: 10px;
+    font-size: 14px;
     box-shadow: 3px 1px 5px rgba(0, 0, 0, .1);
     text-align: center;
     padding: 20px 2px;
     cursor: pointer;
     z-index: 99;
+    border: 0;
 }
 
 .modal-open {
     right: 0;
-}
-
-.sidebar #mode-switcher em {
-    font-size: 10px;
 }
 
 .sidebar #ContentBlocks,
@@ -485,6 +459,7 @@ div#MenuSettings .parent-menu-hide {
         background-color: #fff;
         line-height: normal;
         color: #000;
+        font-weight: 900;
         padding: 12px;
         min-height: 76px;
         position: relative;
@@ -536,6 +511,11 @@ div#MenuSettings .parent-menu-hide {
 .sidebar .block-manager .gjs-block-label img {
     width: 28px !important;
     height: 28px !important;
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
 }
 
 .sidebar .block-manager .gjs-block-label .my-label-block {
@@ -869,7 +849,7 @@ div#MenuSettings .parent-menu-hide {
     transform: translateY(100%);
 }
 
-#wrapper.gjs-hovered, #wrapper .gjs-comp-selected {
+[data-gjs-type="wrapper"].gjs-hovered, [data-gjs-type="wrapper"] .gjs-comp-selected {
     outline: 1px solid #08c !important;
 }
 
@@ -985,10 +965,10 @@ div#MenuSettings .parent-menu-hide {
     padding: 5px 10px;
     color: #000;
     font-size: 14px;
+    text-transform: capitalize;
     -webkit-transition: border-color .25s;
     transition: border-color .25s;
     opacity: 0.6;
-    text-transform: capitalize;
     appearance: auto;
 }
 
@@ -1086,12 +1066,13 @@ div#MenuSettings .parent-menu-hide {
 
 /*Style Manager*/
 .uxmanager-modal .modal-dialog {
-    max-width: 100% !important;
+    max-width: calc(100% - 1rem) !important;
 }
 
 #layer-manager {
     display: none;
     height: calc(60vh - 40px) !important;
+    z-index: 9999 !important;
 }
 
 .jsPanel-content {
@@ -1142,7 +1123,7 @@ div#MenuSettings .parent-menu-hide {
 }
 
 .gjs-sm-sectors,
-.gjs-sm-sector .gjs-sm-title,
+.gjs-sm-sector .gjs-sm-sector-title,
 .gjs-layer-title-c,
 .gjs-layer-title,
 .gjs-trt-traits {
@@ -1151,7 +1132,7 @@ div#MenuSettings .parent-menu-hide {
 }
 
 .gjs-sm-sector .gjs-sm-field.gjs-sm-composite, .gjs-clm-tags .gjs-sm-field.gjs-sm-composite, .gjs-sm-sector .gjs-sm-composite.gjs-clm-field, .gjs-clm-tags .gjs-sm-composite.gjs-clm-field {
-    background: #fafafa;
+    background: #fff;
 }
 
 
@@ -1169,6 +1150,11 @@ div#MenuSettings .parent-menu-hide {
     border-radius: 0 4px 4px 0;
 }
 
+.gjs-field-toggle_radio .toggle-wrapper label em,
+.gjs-field-toggle_checkbox .toggle-wrapper label em,
+.gjs-field-toggle_checkbox .toggle-wrapper label img {
+    margin:0px 4px;
+}
 
 .gjs-select option, .gjs-clm-select option, .gjs-sm-select option, .gjs-fields option, .gjs-sm-unit option {
     color: #495157;
@@ -1341,10 +1327,6 @@ div#MenuSettings .parent-menu-hide {
         .managetab div.uitab.active,
         .blockstabview div.uitab.active,
         .notification-set div.uitab.active {
-            background-image: -webkit-gradient(linear,left top,left bottom,from(#f3f3f3),to(#fff));
-            background-image: -webkit-linear-gradient(top,#f3f3f3,#fff);
-            background-image: -o-linear-gradient(top,#f3f3f3,#fff);
-            background-image: linear-gradient(180deg,#f3f3f3,#fff);
             border-bottom: 3px solid #0088cc;
         }
 
@@ -1379,22 +1361,24 @@ div.uitab.notificationtab a {
     transform: rotate(-20deg);
 }
 
-#wrapper {
+[data-gjs-type="wrapper"] {
     height: 100%;
+    min-height: inherit !important;
 }
 
-    #wrapper .container,
-    #wrapper .container-fluid,
-    #wrapper .row,
-    #wrapper .col,
-    #wrapper [class^="col-"],
-    #wrapper .tab-pane,
-    #wrapper .card-group {
+    [data-gjs-type="wrapper"] .container,
+    [data-gjs-type="wrapper"] .container-fluid,
+    [data-gjs-type="wrapper"] .row,
+    [data-gjs-type="wrapper"] .col,
+    [data-gjs-type="wrapper"] [class^="col-"],
+    [data-gjs-type="wrapper"] .tab-pane,
+    [data-gjs-type="wrapper"] .card-group,
+    [data-gjs-type="custom-code"] {
         min-height: 1.5rem !important;
     }
 
-/*#wrapper .collapse,
-	#wrapper .dropdown-menu {
+/*[data-gjs-type="wrapper"] .collapse,
+	[data-gjs-type="wrapper"] .dropdown-menu {
 		display: block !important;
 		min-height: 1.5rem !important;
 	}*/
@@ -1489,13 +1473,15 @@ html.responsive {
 }
 
     html.responsive body {
+        position: relative;
+        z-index: 0;
         border-style: solid;
         border-width: 40px 10px 70px;
         border-color: #000;
         border-radius: 30px;
     }
 
-        html.responsive body #wrapper {
+        html.responsive body [data-gjs-type="wrapper"] {
             height: 100%;
         }
 
@@ -1508,6 +1494,8 @@ html.responsive {
 }
 
 .mobile-responsive body {
+    position: relative;
+    z-index: 0;
     border-style: solid;
     border-width: 10px 40px 10px 70px;
     border-color: #000;
@@ -2276,10 +2264,16 @@ span.notificationname {
     font-weight: bold;
 }
 
-#wrapper [data-gjs-type="grid"] [data-empty="true"] {
+[data-gjs-type="wrapper"] [data-empty="true"] {
     position: relative;
     padding: 0 !important;
     min-height: 50px !important;
+}
+
+.vj-link[data-empty="true"] {
+    position: relative;
+    min-width: 150px;
+    min-height: 50px;
 }
 
 [data-empty="true"]:before {
@@ -2296,6 +2290,10 @@ span.notificationname {
     right: 2px;
     background-color: rgba(238,238,238, 0.2);
     text-transform: uppercase;
+}
+
+.vj-link[data-empty="true"]:before {
+    content: "Link Group";
 }
 
 @media (min-width: 992px) {
@@ -2583,30 +2581,14 @@ span.notificationname {
 
 .traitsmanager .preset-wrapper div.styles {
     width: 278px;
-    padding: 6px 0;
-    border-top: 1px solid transparent;
-    border-bottom: 1px solid #eee;
-    display: inline-flex;
+    padding: 10px 0px 6px 0;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid transparent;
+    position: relative;
 }
-
-    .traitsmanager .preset-wrapper div.styles em {
-        align-self: center;
-        visibility: hidden;
-        font-size: 16px;
-    }
-
-
-    .traitsmanager .preset-wrapper div.styles.active em {
-        align-self: center;
-        visibility: visible;
-    }
 
 .traitsmanager .preset-wrapper.button div.styles.active {
     justify-content: space-between;
-}
-
-.traitsmanager .preset-wrapper div.styles.active {
-    border-color: #ccc;
 }
 
 .traitsmanager .preset-wrapper label {
@@ -2646,7 +2628,28 @@ span.notificationname {
     color: #fff;
     font-size: 16px;
     white-space: normal;
+    margin-top:12px;
 }
+
+.traitsmanager .preset-wrapper .styles .component-style {
+    position: absolute;
+    top: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: normal;
+    font-style: normal;
+    color: #aaa;
+    text-shadow: none;
+    text-decoration: none;
+    text-transform: capitalize;
+    word-spacing: normal;
+}
+
+.traitsmanager .preset-wrapper .styles.active .component-style {
+    font-weight: bold !important;
+    color: #000 !important;
+}
+
 
 .traitsmanager .preset-wrapper.blockwrapper label div {
     pointer-events: none;
@@ -2666,9 +2669,35 @@ span.notificationname {
     border: 1px solid #ccc;
 }
 
-.gjs-rte-active .fa-link:before {
-    content: "\f127" !important;
+.traitsmanager .preset-wrapper.blockwrapper label nav {
+    width: max-content;
 }
+
+    .traitsmanager .preset-wrapper.blockwrapper label nav li.selected a,
+    .traitsmanager .preset-wrapper.blockwrapper label nav li,
+    .traitsmanager .preset-wrapper.blockwrapper label nav li a,
+    .traitsmanager .preset-wrapper.blockwrapper label nav li .dropdown-toggle::after {
+        border: 0px !important;
+    }
+
+        .traitsmanager .preset-wrapper.blockwrapper label nav li a {
+            color: #333 !important;
+        }
+
+
+        .gjs-rte-active .fa-link:before {
+            content: "\f127" !important;
+        }
+
+.traitsmanager .toggle-box label em {
+    transition: all 0.4s ease;
+    transform: rotateZ(-90deg);
+}
+
+.traitsmanager .toggle-box input:checked ~ label em {
+    transform: rotateZ(0deg);
+}
+
 /*custom slider*/
 
 .custom-range-sliderInput {
@@ -3260,6 +3289,11 @@ input.rangeinput {
 
 #LibraryBlock img {
     width: 100%;
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
 }
 
 #LibraryBlock .sub-label {
@@ -3582,6 +3616,141 @@ body.resp-mode.mobile-landscape .vj-wrapper {
     pointer-events: none;
 }
 
-.gjs-selected {
-    outline-offset: unset !important;
+body .gjs-selected {
+    outline-offset: -1px !important;
+    outline-width: 1px !important;
+}
+
+.gjs-sm-customselect .sm-select-wrapper {
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.gjs-sm-customselect .gjs-fields {
+    position: relative;
+}
+
+.gjs-sm-customselect .sm-select-wrapper select:focus {
+    outline: 0px;
+}
+
+.gjs-sm-customselect .sm-select-wrapper select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    color: inherit;
+    border: none;
+    background-color: transparent;
+    box-sizing: border-box;
+    width: 100%;
+    position: relative;
+    padding: 5px;
+    z-index: 1;
+}
+
+.gjs-sm-customselect .sm-select-wrapper:before {
+    content: "\f0d7";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    position: absolute;
+    right: 6px;
+    top: 6px;
+}
+
+.gjs-sm-customselect option[disabled] {
+    color: #000;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.gjs-field-toggle .toggle-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #aaa;
+    text-transform: capitalize;
+    width: 100%;
+    cursor: pointer;
+}
+
+.gjs-field-toggle.gjs-field {
+    cursor: pointer;
+    border:0px;
+}
+
+.gjs-field-toggle .toggle-box input{
+    display: none;
+}
+
+.toggle-box {
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    text-align: center;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+}
+
+.app-header {
+    background-color: #495157;
+    color: #a4afb7;
+    padding: 10px;
+    font-size: 13px;
+    height: 40px;
+}
+
+.app-title {
+    float: left;
+}
+
+.app-name {
+    float: right;
+}
+
+.app-link {
+    color: #fff;
+}
+
+.app-header + #vjEditor {
+    margin-top: 40px;
+    margin-right: auto;
+    margin-left: auto;
+    width: 100%;
+    height: calc(100% - 50px) !important;
+}
+
+
+.gjs-trt-trait--toggle .gjs-label {
+    display:none;
+}
+
+[data-gjs-type=wrapper] .frame-box {
+    z-index: -1;
+}
+
+[data-gjs-type=wrapper] .btn {
+    -webkit-user-select: inherit;
+}
+
+    [data-gjs-type=wrapper] .btn .button-text {
+        display: inline-block;
+        min-width: 10px;
+        min-height: 10px;
+    }
+
+[data-gjs-type=wrapper] .vj-section .bg-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1;
+}
+
+[data-gjs-type="wrapper"] {
+    overflow: auto;
+    overflow-x: hidden;
 }

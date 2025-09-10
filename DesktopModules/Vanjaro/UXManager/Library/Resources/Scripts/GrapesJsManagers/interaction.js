@@ -75,6 +75,7 @@ $(document).ready(function () {
         $('.ToolbarItem').prepend("<div class='ntoolbox'></div><ul class='more_icons'><li class='openbtn'><em class='fas fa-chevron-up' data-bs-toggle='tooltip' data-bs-placement='right'  title=\"" + VjLocalized.ShowHiddenIcons + "\"></em></li></ul>");
         $('.ntoolbox').prepend(toolbar);
         $('.ntoolbox  li:lt(5)').hide();
+        $('.ntoolbox').find('[data-bs-toggle="tooltip"]').tooltip();
     }
 
     $(".search-block input").keyup(function () {
@@ -156,7 +157,9 @@ $(document).ready(function () {
     }
 
     // Show-Hide ContentBlocks & MenuSettings
-    $(".block-manager #MenuSettings , .Menupanel-top , #About, #Shortcuts").hide();
+    if (typeof vjEditorSettings != 'undefined')
+        $(".block-manager #MenuSettings, .Menupanel-top , #About, #Shortcuts").hide();
+
     $(".block-manager #MenuSettings ul ul").css("left", "100%");
 
     $(".panelheader .blockItem").click(function (e) {
@@ -169,6 +172,8 @@ $(document).ready(function () {
         $("#StyleToolManager").hide();
         var ID = $this.attr("href");
 
+        $("#iframeHolder").find('iframe').attr('src', 'about:blank');
+
         if (ID == "#MenuSettings") {
             $(".block-manager > div").not("#MenuSettings,.Menupanel-top").fadeOut();
             $("#StyleToolManager").hide();
@@ -179,7 +184,6 @@ $(document).ready(function () {
             $(".block-manager").find(ID).fadeIn();
             $(".Menupanel-top").fadeIn();
             $(".Menupanel-top input").focus();
-            $(".About").css({ "pointer-events": "auto" });
 
             $(".box-content").find("ul, li").removeAttr("style");
             $("#MenuSettings").find("ul").removeClass("left-0 left-100 left-200 left-minus-100");
@@ -194,16 +198,12 @@ $(document).ready(function () {
             $(".Menupanel-top").hide();
             $("#About").hide();
             $("#Shortcuts").hide();
-            $(".About").css({ "pointer-events": "auto" });
-            //setTimeout(function () {
             $(".panel-top , .block-set").fadeIn();
             $("#ContentBlocks").fadeIn();
             ChangeBlockType();
-            //}, 300);
         }
 
         else if (ID == "#About") {
-            $(".About").css({ "pointer-events": "none" });
             $(".block-manager #MenuSettings ,.Menupanel-top").hide();
             $("#StyleToolManager").hide();
             $("#Notification").hide();
@@ -220,12 +220,14 @@ $(document).ready(function () {
             $(".Menupanel-top").hide();
             $(".panel-top , .block-set").hide();
             $("#About").hide();
-            $(".About").css({ "pointer-events": "auto" });
             $("#Shortcuts").fadeIn();
-
         }
-
-        $("#iframeHolder").find('iframe').attr('src', 'about:blank');
+        else if ($this.hasClass("Messages")) {
+            var messagesrc = CurrentExtTabUrl + "&guid=" + $(this).attr('guid');
+            $("#BlockManager").hide();
+            $("#iframeHolder").fadeIn();
+            $('#iframeHolder').find('iframe').attr('src', messagesrc);
+        }
 
         $(".styletab").removeClass('active');
         $(".traitstab").addClass('active');

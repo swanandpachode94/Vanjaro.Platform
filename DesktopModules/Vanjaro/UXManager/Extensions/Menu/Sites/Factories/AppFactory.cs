@@ -38,12 +38,25 @@ namespace Vanjaro.UXManager.Extensions.Menu.Sites.Factories
             };
             Views.Add(addSite);
 
+
+            AngularView choosetemplate = new AngularView
+            {
+                AccessRoles = "host",
+                UrlPaths = new List<string> {
+                  "choosetemplate"
+                },
+                TemplatePath = "setting/choosetemplate.html",
+                Identifier = Identifier.setting_choosetemplate.ToString(),
+                Defaults = new Dictionary<string, string> { }
+            };
+            Views.Add(choosetemplate);
+
             return Views;
         }
 
         internal static AppInformation GetAppInformation()
         {
-            return new AppInformation(ExtensionInfo.Name, ExtensionInfo.FriendlyName, ExtensionInfo.GUID, GetRuntimeVersion, "http://www.mandeeps.com/store", "http://www.mandeeps.com/Activation", 14, 7, new List<string> { "Domain", "Server" }, false);
+            return new AppInformation(ExtensionInfo.Name, ExtensionInfo.FriendlyName, ExtensionInfo.GUID, GetRuntimeVersion, "", "", 14, 7, new List<string> { "Domain", "Server" }, false);
         }
 
         internal static string GetRuntimeVersion
@@ -107,7 +120,7 @@ namespace Vanjaro.UXManager.Extensions.Menu.Sites.Factories
 
         internal enum Identifier
         {
-            setting_sites, setting_add
+            setting_sites, setting_add, setting_choosetemplate
         }
     }
 }

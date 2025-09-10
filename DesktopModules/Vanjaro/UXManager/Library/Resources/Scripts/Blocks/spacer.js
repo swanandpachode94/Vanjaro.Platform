@@ -17,12 +17,49 @@
 
 	let domc = editor.DomComponents;
 	const defaultType = domc.getType('default');
-	const defaultModel = defaultType.model;
 	const defaultView = defaultType.view;
 
 	domc.addType('spacer', {
-		model: defaultModel.extend({
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+		model: {
+			initToolbar() {
+				var model = this;
+				if (!model.get('toolbar')) {
+					var tb = [];
+
+					tb.push({
+						attributes: { class: 'fa fa-arrow-up' },
+						command: function (t) {
+							return t.runCommand("core:component-exit", {
+								force: 1
+							})
+						}
+					});
+
+					if (model.get('draggable')) {
+						tb.push({
+							attributes: { class: 'fa fa-arrows' },
+							command: 'tlb-move',
+						});
+					}
+
+					if (model.get('copyable')) {
+						tb.push({
+							attributes: { class: 'fa fa-clone' },
+							command: 'tlb-clone',
+						});
+					}
+
+					if (model.get('removable')) {
+						tb.push({
+							attributes: { class: 'fa fa-trash-o' },
+							command: 'tlb-delete',
+						});
+					}
+
+					model.set('toolbar', tb);
+				}
+			},
+			defaults: {
 				droppable: false,
 				classes: ['spacer'],
 				resizable: {
@@ -36,7 +73,7 @@
 					br: 0, // Bottom right
 					minDim: 10,
 					maxDim: 600,
-					onMove: function (e) {
+					onEnd: function (e) {
 						var comp = VjEditor.getSelected();
 
 						//Updating Trait on resize
@@ -51,7 +88,7 @@
 								comp.getTrait('height').el.children[1].value = val
 							}
 						}
-					}
+                    }
 				},
 				traits: [
 					{
@@ -66,15 +103,14 @@
 						changeProp: 1,
 					}
 				]
-			})
+			}
 		},
-			{
 				isComponent(el) {
 					if (el && el.classList && el.classList.contains('spacer')) {
 						return { type: 'spacer' };
 					}
 				}
-			}),
+		,
 		view: defaultView
 	});
 }

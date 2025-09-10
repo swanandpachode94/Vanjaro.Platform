@@ -186,7 +186,7 @@
 
 .vj-ux-manager .permission-icon {
     margin-bottom: 10px;
-    color:inherit;
+    color: inherit;
 }
 
 .vj-ux-manager .ui-inlineblock {
@@ -226,7 +226,8 @@
     padding: 0px 15px 20px;
 }
 
-    .vj-ux-manager .uiengine-wrapper.adduser {
+.vj-ux-manager .uiengine-wrapper.adduser,
+.vj-ux-manager .uiengine-wrapper.importuser {
         padding: 15px 0;
     }
 
@@ -243,6 +244,36 @@
     float: right;
 }
 
-/*.vj-ux-manager .rolename {
-    padding-top: 16px;
-}*/
+.vj-ux-manager .deletedUserCount {
+    font-weight: 800;
+    cursor: pointer;
+    position: absolute;
+    top: 0px;
+    margin-left: 2px;
+}
+
+.vj-ux-manager .btn-del-users {
+    position: relative;
+    margin-right: 4px;
+}
+
+.vj-ux-manager .importuser .ImportFile .preview-import ~ div .btn {
+    display: none;
+}
+
+
+.import-user .ImportFile span.btn {
+    text-align: right;
+    position: fixed !important;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.import-user .fixed-footer {
+    height: 82px;
+}
+
+.import-user .accordion-item {
+    background: transparent;
+}

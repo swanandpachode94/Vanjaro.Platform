@@ -271,7 +271,7 @@
     <value>Show More</value>
   </data>
   <data name="Data.Block.Cookie.cc_dismiss.Text" xml:space="preserve">
-    <value>ACCEPT</value>
+    <value>Accept</value>
   </data>
   <data name="Data.Block.Cookie.cc_link.Text" xml:space="preserve">
     <value>Learn more </value>
@@ -284,5 +284,11 @@
   </data>
   <data name="MyProfile.Text" xml:space="preserve">
     <value>My Profile</value>
+  </data>
+  <data name="Data.Block.Register.VerificationCode.Text" xml:space="preserve">
+    <value>Enter Verification Code</value>
+  </data>
+  <data name="Data.Block.Register.VerificationCodePlaceholderText.Text" xml:space="preserve">
+    <value>Enter Verification Code</value>
   </data>
 </root>

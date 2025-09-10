@@ -1,4 +1,5 @@
-﻿using DotNetNuke.Web.Api;
+﻿using DotNetNuke.Security.Permissions;
+using DotNetNuke.Web.Api;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -29,9 +30,9 @@ namespace Vanjaro.UXManager.Extensions.Menu.Sites.Controllers
         }
 
         [HttpGet]
-        public ActionResult GetPortals(int pageSize, int pageIndex)
+        public ActionResult GetPortals(int pageSize, int pageIndex, string filter)
         {
-            return SitesManager.GetAllPortals(PortalSettings.PortalId, string.Empty, pageIndex, pageSize);
+            return SitesManager.GetAllPortals(PortalSettings.PortalId, filter, pageIndex, pageSize);
         }
 
         [HttpGet]
@@ -43,7 +44,7 @@ namespace Vanjaro.UXManager.Extensions.Menu.Sites.Controllers
         [HttpGet]
         public HttpResponseMessage Export(int PortalID, string Name)
         {
-            return SitesManager.Export(PortalID, Name);
+            return SitesManager.Export(PortalID, Name, TabPermissionController.HasTabPermission("EDIT"));
         }
 
         public override string AccessRoles()

@@ -1,5 +1,8 @@
-﻿using DotNetNuke.UI.WebControls;
+﻿using DotNetNuke.Entities.Tabs;
+using DotNetNuke.UI.WebControls;
 using System;
+using System.Collections;
+using DotNetNuke.Entities.Portals;
 using System.Collections.Generic;
 using System.Web;
 using System.Xml.Serialization;
@@ -96,6 +99,14 @@ namespace Vanjaro.UXManager.Extensions.Block.Menu.Entities
             CommandName = dnnNode.get_CustomAttribute("CommandName");
             CommandArgument = dnnNode.get_CustomAttribute("CommandArgument");
             IsRedirect = dnnNode.NavigateURL.StartsWith(string.Format("{0}://{1}", HttpContext.Current.Request.Url.Scheme, HttpContext.Current.Request.Url.Authority)) ? false : true;
+            #region Get Anchor Tab
+            Hashtable tabSettings = TabController.Instance.GetTabSettings(Convert.ToInt32(dnnNode.ID));
+            if (tabSettings != null && tabSettings.ContainsKey("AnchorID") && !string.IsNullOrEmpty(tabSettings["AnchorID"]?.ToString()))
+            {
+                Enabled = true;
+                Url = TabController.Instance.GetTab(Convert.ToInt32(tabSettings["AnchorPageID"]), PortalSettings.Current.PortalId).FullUrl + "#" + tabSettings["AnchorID"];
+            }
+            #endregion
 
             DNNNodeToMenuNode(dnnNode, this);
 

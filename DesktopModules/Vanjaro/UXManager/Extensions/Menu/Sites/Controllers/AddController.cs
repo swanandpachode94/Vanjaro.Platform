@@ -1,7 +1,9 @@
 ﻿using Dnn.PersonaBar.Sites.Services.Dto;
+using DotNetNuke.Services.Localization;
 using DotNetNuke.Web.Api;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Web.Http;
 using Vanjaro.Common.ASPNET.WebAPI;
 using Vanjaro.Common.Engines.UIEngine;
@@ -28,26 +30,37 @@ namespace Vanjaro.UXManager.Extensions.Menu.Sites.Controllers
         }
 
         [HttpPost]
-        public ActionResult Create(CreatePortalRequest Data)
+        public ActionResult Create(dynamic Data)
         {
-            CreatePortalRequest request = new CreatePortalRequest
+            ActionResult actionResult = new ActionResult();
+            string SiteAlias = Data.PortalRequest.SiteAlias.Value.ToLower();
+            Regex regex = new Regex("(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]");
+            if (!string.IsNullOrEmpty(SiteAlias) && regex.Match(SiteAlias).Value != SiteAlias.Replace("http://", "").Replace("https://", "").TrimEnd('/'))
+                actionResult.AddError("SiteDomainError", Localization.GetString("SiteDomainError", Components.Constants.LocalResourcesFile));
+
+            if (actionResult.IsSuccess)
             {
-                SiteName = Data.SiteName,
-                SiteAlias = Data.SiteAlias,
-                IsChildSite = false,
-                HomeDirectory = "Portals/[PortalID]",
-                UseCurrentUserAsAdmin = Data.UseCurrentUserAsAdmin
-            };
-            if (!request.UseCurrentUserAsAdmin)
-            {
-                request.Username = Data.Email;
-                request.Email = Data.Email;
-                request.Firstname = Data.Firstname;
-                request.Lastname = Data.Lastname;
-                request.Password = Data.Password;
-                request.PasswordConfirm = Data.PasswordConfirm;
+                CreatePortalRequest request = new CreatePortalRequest
+                {
+                    SiteName = Data.PortalRequest.SiteName.Value,
+                    SiteAlias = Data.PortalRequest.SiteAlias.Value,
+                    IsChildSite = false,
+                    HomeDirectory = "Portals/[PortalID]",
+                    UseCurrentUserAsAdmin = Data.PortalRequest.UseCurrentUserAsAdmin.Value
+                };
+                if (!request.UseCurrentUserAsAdmin)
+                {
+                    request.Username = Data.PortalRequest.Email.Value;
+                    request.Email = Data.PortalRequest.Email.Value;
+                    request.Firstname = Data.PortalRequest.Firstname.Value;
+                    request.Lastname = Data.PortalRequest.Lastname.Value;
+                    request.Password = Data.PortalRequest.Password.Value;
+                    request.PasswordConfirm = Data.PortalRequest.PasswordConfirm.Value;
+                }
+                actionResult = SitesManager.CreatePortal(request, Data.SiteTemplate);
             }
-            return SitesManager.CreatePortal(request);
+
+            return actionResult;
         }
 
         public override string AccessRoles()

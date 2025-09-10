@@ -12,6 +12,7 @@ using System.Linq;
 using System.Text;
 using Vanjaro.Core.Entities;
 using Vanjaro.Core.Entities.Interface;
+using Vanjaro.Core.Entities.Menu;
 using static Vanjaro.Core.Factories;
 using static Vanjaro.Core.Managers;
 
@@ -40,10 +41,16 @@ namespace Vanjaro.Core.Extensions.Notification.Notification.Managers
             {
                 foreach (INotificationTask Task in NotificationTask)
                 {
-
                     if (Task.Hierarchy.NotificationCount > 0)
                     {
-                        sb.Append("<li><a onclick=\"parent.OpenPopUp('',600,'right','" + Localization.GetString("ReviewContent", Components.Constants.LocalResourcesFile) + "','" + Task.Hierarchy.URL + "')\"><span class='notificationname'>" + Task.Hierarchy.NotificationName + "</span><span class='badge badge-error errorcount'>" + Task.Hierarchy.NotificationCount + "</span></a></li>");
+                        int Width = Task.Hierarchy.Width ?? 600;
+                        string Title = Task.Hierarchy.Title ?? Localization.GetString("Review", Components.Constants.LocalResourcesFile);
+                        string Position = "right";
+                        if (Task.Hierarchy.Event == MenuAction.FullScreen)
+                            Position = "center";
+                        else if (Task.Hierarchy.Event == MenuAction.CenterOverlay)
+                            Position = "center";
+                        sb.Append("<li><a onclick=\"parent.OpenPopUp(''," + Width + ",'" + Position + "','" + Title + "','" + Task.Hierarchy.URL + "')\"><span class='notificationname'>" + Task.Hierarchy.NotificationName + "</span><span class='badge badge - error errorcount'>" + Task.Hierarchy.NotificationCount + "</span></a></li>");
                     }
                 }
             }
@@ -72,8 +79,8 @@ namespace Vanjaro.Core.Extensions.Notification.Notification.Managers
                     }
                     catch { continue; }
                 }
-                NotificationTasks = ServiceInterfaceAssemblies;
-                CacheFactory.Set(CacheKey, ServiceInterfaceAssemblies);
+                NotificationTasks = ServiceInterfaceAssemblies.Where(x => x.Hierarchy != null).ToList();
+                CacheFactory.Set(CacheKey, NotificationTasks);
             }
             return NotificationTasks;
         }
@@ -119,8 +126,8 @@ namespace Vanjaro.Core.Extensions.Notification.Notification.Managers
                         string[] markup = s.Split(':');
                         if (!string.IsNullOrEmpty(s) && markup.Length > 1)
                         {
-                            sb.Append("<div class=\"notification-details notification-" + markup[0].ToLower() + "\"><span class=\"heading " + markup[0].ToLower() + "\">" + markup[0] + ":</span>");
-                            sb.Append("<span>" + markup[1] + "</span></div>" + Environment.NewLine);
+                            sb.Append("<div class=\"notification-details\"><span class=\"heading\">" + markup[0] + ":</span>");
+                            sb.Append("<span class=\"description \">" + markup[1] + "</span></div>" + Environment.NewLine);
                         }
                     }
                     NotificationViewModel notificationViewModel = new NotificationViewModel

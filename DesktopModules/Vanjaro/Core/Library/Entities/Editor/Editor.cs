@@ -1,4 +1,4 @@
-﻿using DotNetNuke.Entities.Portals;
+﻿ using DotNetNuke.Entities.Portals;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,16 +42,30 @@ namespace Vanjaro.Core.Entities
         {
             string url = "/api/vanjaro/";
             if (HttpContext.Current != null)
-                url = string.Format("{0}://{1}{2}", HttpContext.Current.Request.Url.Scheme, HttpContext.Current.Request.Url.Authority, url);
+            {
+                var alias = PortalAliasController.Instance.GetPortalAliasesByPortalId(PortalSettings.Current.PortalId).Where(x => x.CultureCode == PortalSettings.Current.CultureCode && x.IsPrimary).OrderByDescending(a => a.IsPrimary).FirstOrDefault();
+                if (alias == null)
+                    alias = PortalAliasController.Instance.GetPortalAliasesByPortalId(PortalSettings.Current.PortalId).OrderByDescending(a => a.IsPrimary).FirstOrDefault();
+
+                var httpAlias = DotNetNuke.Common.Globals.AddHTTP(alias.HTTPAlias);
+                var originalUrl = HttpContext.Current.Items["UrlRewrite:OriginalUrl"];
+                httpAlias = DotNetNuke.Common.Globals.AddPort(httpAlias, originalUrl?.ToString().ToLowerInvariant() ?? httpAlias);
+                url = httpAlias.TrimEnd('/') + url;
+            }
 
             EditorOptions options = new EditorOptions()
             {
                 UpdateContentUrl = url + "page/save",
                 GetContentUrl = url + "page/get",
-                ContainerID = "#vjEditor",
                 EditPage = true,
                 ModuleId = -1,
                 RevisionGUID = "e2f6ebcb-5d68-4d85-b180-058fb2d26178",
+                Blocks = false,
+                Language = true,
+                CustomBlocks = true,
+                Library = true,
+                InjectThemeCSS = true,
+                ResponsiveStyling = true,
             };
 
             return options;

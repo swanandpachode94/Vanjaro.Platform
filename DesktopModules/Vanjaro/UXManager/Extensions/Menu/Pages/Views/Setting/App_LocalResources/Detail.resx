@@ -480,4 +480,22 @@
   <data name="MakePublic.Text" xml:space="preserve">
     <value>Make Public</value>
   </data>
+  <data name="AddAnchor.Text" xml:space="preserve">
+    <value>Add Anchor</value>
+  </data>
+  <data name="AnchorPage.Text" xml:space="preserve">
+    <value>Anchor</value>
+  </data>
+  <data name="AnchorParentPage.Text" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="EditAnchor.Text" xml:space="preserve">
+    <value>Edit Anchor</value>
+  </data>
+  <data name="PageTypeAnchor.Text" xml:space="preserve">
+    <value>Anchor</value>
+  </data>
+  <data name="AnchorID.Text" xml:space="preserve">
+    <value>Anchor ID</value>
+  </data>
 </root>

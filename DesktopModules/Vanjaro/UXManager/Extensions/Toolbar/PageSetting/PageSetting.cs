@@ -8,6 +8,7 @@ using Vanjaro.Common.Engines.UIEngine.AngularBootstrap;
 using Vanjaro.Common.Entities.Apps;
 using Vanjaro.Common.Utilities;
 using Vanjaro.Core.Entities;
+using Vanjaro.Core.Entities.Menu;
 using Vanjaro.UXManager.Library;
 using Vanjaro.UXManager.Library.Entities;
 using Vanjaro.UXManager.Library.Entities.Interface;
@@ -20,8 +21,7 @@ namespace Vanjaro.UXManager.Extensions.Toolbar.PageSetting
     {
         public ToolbarItem Item => new ToolbarItem
         {
-
-            Text = Localization.Get(ExtensionInfo.Name, "Text", Components.Constants.LocalResourcesFile, Extension.ShowMissingKeysStatic, Localization.SharedMissingPrefix)
+            Text = string.IsNullOrEmpty(Editor.Options.SettingsTitle) ? Localization.Get(ExtensionInfo.Name, "Text", Components.Constants.LocalResourcesFile, Extension.ShowMissingKeysStatic, Localization.SharedMissingPrefix) : Editor.Options.SettingsTitle.ToString()
         };
 
         public Guid SettingGuid => Guid.Parse(ExtensionInfo.GUID);

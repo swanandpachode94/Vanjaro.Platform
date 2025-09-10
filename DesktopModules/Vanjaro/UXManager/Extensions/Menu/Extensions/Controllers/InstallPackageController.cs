@@ -17,6 +17,8 @@ using Vanjaro.Core.Components;
 using Newtonsoft.Json;
 using Dnn.PersonaBar.Extensions.Components.Dto;
 using static Vanjaro.Core.Managers;
+using DotNetNuke.Common.Utilities;
+using DotNetNuke.Services.Installer.Packages;
 
 namespace Vanjaro.UXManager.Extensions.Menu.Extensions.Controllers
 {
@@ -41,9 +43,11 @@ namespace Vanjaro.UXManager.Extensions.Menu.Extensions.Controllers
             ActionResult actionResult = new ActionResult();
             List<InstallResultDto> installResults = Managers.InstallPackageManager.InstallPackage(PortalSettings, UserInfo, HttpContext.Current.Server.MapPath("\\DesktopModules\\Vanjaro\\Temp\\Install\\"));
             actionResult.Data = installResults;
+            DataCache.ClearCache();
+            actionResult.IsSuccess = true;
             return actionResult;
         }
-        
+
         [HttpPost]
         public ActionResult Download()
         {
@@ -61,7 +65,7 @@ namespace Vanjaro.UXManager.Extensions.Menu.Extensions.Controllers
                 {
                     WebClient webClient = new WebClient();
                     try
-                    {                        
+                    {
                         File.WriteAllBytes(installPackagePath + Path.GetFileName(item.Text + ".zip"), webClient.DownloadData(item.Value));
                     }
                     catch (Exception ex)

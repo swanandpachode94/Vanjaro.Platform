@@ -1,6 +1,7 @@
 ﻿using DotNetNuke.Web.Api;
 using DotNetNuke.Web.Api.Internal;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Web;
 using System.Web.Http;
 using Vanjaro.Core.Data.Entities;
@@ -17,7 +18,16 @@ namespace Vanjaro.UXManager.Library.Controllers
         [DnnPageEditor]
         public dynamic Save(dynamic Data)
         {
-            return Vanjaro.Core.Managers.PageManager.Update(this.PortalSettings, Data);
+            double dataLength = (HttpContext.Current.Request.ContentLength / 1024f) / 1024f;
+            if (dataLength < 5)
+                return Vanjaro.Core.Managers.PageManager.Update(this.PortalSettings, Data);
+            else
+            {
+                dynamic result = new ExpandoObject();
+                result.IsSuccess = false;
+                result.Message = "An error occurred(Code: 1001). Your changes were not saved.";
+                return result;
+            }
         }
 
         [HttpGet]
@@ -26,6 +36,7 @@ namespace Vanjaro.UXManager.Library.Controllers
         {
             var page = Vanjaro.Core.Managers.PageManager.GetLatestVersion(PortalSettings.ActiveTab.TabID, PortalSettings.CultureCode, true);
             Core.Managers.PageManager.ApplyGlobalBlockJSON(page);
+            Core.Managers.PageManager.ApplyBlockJSON(page);
             return page;
         }
 
@@ -51,17 +62,20 @@ namespace Vanjaro.UXManager.Library.Controllers
         }
 
         [HttpGet]
-        [DnnPageEditor]
+        [Authorize]
         public List<PageItem> GetPages()
         {
             return PageManager.GetPages(PortalSettings.ActiveTab.PortalID);
         }
 
         [HttpGet]
-        [DnnPageEditor]
-        public string GetPageUrl(int TabID)
+        [Authorize]
+        public string GetPageUrl(int TbID, bool AbsolutelLink)
         {
-            return PageManager.GetPageUrl(PortalSettings, TabID);
+            string result = PageManager.GetPageUrl(PortalSettings, TbID, AbsolutelLink);
+            if (string.IsNullOrEmpty(result))
+                result = "/";
+            return result;
         }
 
         [HttpGet]

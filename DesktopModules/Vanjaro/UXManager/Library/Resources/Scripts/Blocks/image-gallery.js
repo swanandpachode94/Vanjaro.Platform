@@ -9,18 +9,26 @@
 			attributes: { class: 'fas fa-images' },
 			content: `
             <div class="vj-image-gallery">
-				<picture class="picture-box" data-gjs-clickable="false" data-gjs-selectable="false" data-gjs-hoverable="false" data-gjs-draggable="false" data-gjs-droppable="false">
-					<img onclick="typeof OpenImagePopup != 'undefined' && OpenImagePopup(this);" class="img-thumbnail vj-image-gallery-item" src="`+ VjDefaultPath + `image.png"/>
-				</picture>
-				<picture class="picture-box" data-gjs-clickable="false" data-gjs-selectable="false" data-gjs-hoverable="false" data-gjs-draggable="false" data-gjs-droppable="false">
-					<img onclick="typeof OpenImagePopup != 'undefined' && OpenImagePopup(this);" class="img-thumbnail vj-image-gallery-item" src="`+ VjDefaultPath + `image.png"/>
-				</picture>
-				<picture class="picture-box" data-gjs-clickable="false" data-gjs-selectable="false" data-gjs-hoverable="false" data-gjs-draggable="false" data-gjs-droppable="false">
-					<img onclick="typeof OpenImagePopup != 'undefined' && OpenImagePopup(this);" class="img-thumbnail vj-image-gallery-item" src="`+ VjDefaultPath + `image.png"/>
-				</picture>
-				<picture class="picture-box" data-gjs-clickable="false" data-gjs-selectable="false" data-gjs-hoverable="false" data-gjs-draggable="false" data-gjs-droppable="false">
-					<img onclick="typeof OpenImagePopup != 'undefined' && OpenImagePopup(this);" class="img-thumbnail vj-image-gallery-item" src="`+ VjDefaultPath + `image.png"/>
-				</picture>
+				<span class="image-frame">
+					<picture class="picture-box">
+						<img loading="lazy" class="img-thumbnail vj-image-gallery-item" src="`+ VjDefaultPath + `image.png"/>
+					</picture>
+				</span>
+				<span class="image-frame">
+					<picture class="picture-box">
+						<img loading="lazy" class="img-thumbnail vj-image-gallery-item" src="`+ VjDefaultPath + `image.png"/>
+					</picture>
+				</span>
+				<span class="image-frame">
+					<picture class="picture-box">
+						<img loading="lazy" class="img-thumbnail vj-image-gallery-item" src="`+ VjDefaultPath + `image.png"/>
+					</picture>
+				</span>
+				<span class="image-frame">
+					<picture class="picture-box">
+						<img loading="lazy" class="img-thumbnail vj-image-gallery-item" src="`+ VjDefaultPath + `image.png"/>
+					</picture>
+				</span>
 			</div>`,
 			activate: 1
 		});
@@ -31,28 +39,32 @@
 	cmd.add('add-image', ed => {
 		var Selected = VjEditor.getSelected();
 
-        if (Selected.attributes.type == 'image-gallery') {
-            var url = CurrentExtTabUrl + "&guid=a7a5e632-a73a-4792-8049-bc15a9435505#!/setting";
-            var Img = `
-				<picture class="picture-box" data-gjs-clickable="false" data-gjs-selectable="false" data-gjs-hoverable="false" data-gjs-draggable="false" data-gjs-droppable="false">
-					<img onclick="typeof OpenImagePopup != 'undefined' && OpenImagePopup(this);" style="width:` + Selected.components().models[0].getStyle().width + `; height:` + Selected.components().models[0].getStyle().height + `" class="img-thumbnail vj-image-gallery-item" src="` + VjDefaultPath + `image.png"/>
-				</picture>
+		if (Selected.attributes.type == 'image-gallery') {
+			var url = CurrentExtTabUrl + "&guid=a7a5e632-a73a-4792-8049-bc15a9435505#!/setting";
+			var Img = `
+				<span class="image-frame">
+					<picture class="picture-box">
+						<img loading="lazy" style="width:` + Selected.components().models[0].getStyle().width + `; height:` + Selected.components().models[0].getStyle().height + `" class="img-thumbnail vj-image-gallery-item" src="` + VjDefaultPath + `image.png"/>
+					</picture>
+				</span>
 			`;
-            Selected.components().add(Img);
+			Selected.components().add(Img);
 
-            VjEditor.select(Selected.components().last().find('img'));
-        }
-        else {
-            var url = CurrentExtTabUrl + "&guid=a7a5e632-a73a-4792-8049-bc15a9435505#!/setting";
-            var Img = `
-				<picture class="picture-box" data-gjs-clickable="false" data-gjs-selectable="false" data-gjs-hoverable="false" data-gjs-draggable="false" data-gjs-droppable="false">
-				<img onclick="typeof OpenImagePopup != 'undefined' && OpenImagePopup(this);" style="width:` + Selected.getStyle().width + `; height:` + Selected.getStyle().height + `" class="img-thumbnail vj-image-gallery-item" src="` + VjDefaultPath + `image.png"/>
-				</picture>
+			VjEditor.select(Selected.components().last().find('img'));
+		}
+		else {
+			var url = CurrentExtTabUrl + "&guid=a7a5e632-a73a-4792-8049-bc15a9435505#!/setting";
+			var Img = `
+				<span class="image-frame">
+					<picture class="picture-box">
+						<img loading="lazy" style="width:` + Selected.getStyle().width + `; height:` + Selected.getStyle().height + `" class="img-thumbnail vj-image-gallery-item" src="` + VjDefaultPath + `image.png"/>
+					</picture>
+				</span>
 			`;
-            Selected.parent().parent().components().add(Img);
+			Selected.closestType('image-gallery').components().add(Img);
 
-            VjEditor.select(Selected.parent().parent().components().last().find('img'));
-        }
+			VjEditor.select(Selected.closestType('image-gallery').components().last().find('img'));
+		}
 
 		var target = VjEditor.getSelected();
 		window.document.vj_image_target = target;
@@ -61,20 +73,19 @@
 
 	let domc = editor.DomComponents;
 	const defaultType = domc.getType('default');
-	const defaultModel = defaultType.model;
 	const defaultView = defaultType.view;
 
 	domc.addType('image-gallery', {
-		model: defaultModel.extend({
+		model: {
 			initToolbar() {
 				var model = this;
 				if (!model.get('toolbar')) {
 					var tb = [];
 
-                    tb.push({
-                        attributes: { class: 'fa fa-plus', title: VjLocalized.AddImage },
-                        command: 'add-image',
-                    });
+					tb.push({
+						attributes: { class: 'fa fa-plus', title: VjLocalized.AddImage },
+						command: 'add-image',
+					});
 
 					tb.push({
 						attributes: { class: 'fa fa-arrow-up' },
@@ -109,7 +120,7 @@
 					model.set('toolbar', tb);
 				}
 			},
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+			defaults: {
 				'custom-name': 'Image Gallery',
 				droppable: '.vj-image-gallery-item',
 				tagName: 'div',
@@ -129,15 +140,14 @@
 						changeProp: 1,
 					},
 				]
-			}),
+			},
 		},
-			{
 				isComponent(el) {
 					if (el && el.classList && el.classList.contains('vj-image-gallery')) {
 						return { type: 'image-gallery' };
 					}
 				}
-			}),
+		,
 		view: defaultView
 	});
 
@@ -146,16 +156,16 @@
 	const imageView = imageType.view;
 
 	domc.addType('image-gallery-item', {
-		model: imageModel.extend({
+		model: {
 			initToolbar() {
 				var model = this;
 				if (!model.get('toolbar')) {
 					var tb = [];
 
-                    tb.push({
-                        attributes: { class: 'fa fa-plus', title: VjLocalized.AddImage },
-                        command: 'add-image',
-                    });
+					tb.push({
+						attributes: { class: 'fa fa-plus', title: VjLocalized.AddImage },
+						command: 'add-image',
+					});
 
 					tb.push({
 						attributes: { class: 'fa fa-pencil' },
@@ -195,10 +205,14 @@
 					model.set('toolbar', tb);
 				}
 			},
-			defaults: Object.assign({}, imageModel.prototype.defaults, {
+			defaults: {
+				type: 'image',
 				'custom-name': 'Gallery Item',
 				draggable: '.vj-image-gallery',
 				droppable: false,
+				optimize: true,
+				source: true,
+				editor: true,
 				tagName: 'img',
 				traits: [{
 					type: 'text',
@@ -212,25 +226,32 @@
 					label: "Width",
 					name: "width",
 					type: "custom_range",
-                        cssproperties: [{ name: "width" }],
-                        units: [
-                            { name: 'px', min: 10, max: 1920, step: 1, value: 128 },
-                            { name: '%', min: 1, max: 100, step: 1, value: 100 },
-                        ],
+					cssproperties: [{ name: "width" }],
+					units: [
+						{ name: 'px', min: 10, max: 1920, step: 1, value: 128 },
+						{ name: '%', min: 1, max: 100, step: 1, value: 100 },
+					],
 					unit: "px",
 					changeProp: 1,
 				}, {
 					label: "Height",
 					name: "height",
 					type: "custom_range",
-                        cssproperties: [{ name: "height" }],
-                        units: [
-                            { name: 'px', min: 10, max: 1000, step: 1, value: 128 },
-                            { name: '%', min: 1, max: 100, step: 1, value: 100 },
-                        ],
-                        unit: "px",
+					cssproperties: [{ name: "height" }],
+					units: [
+						{ name: 'px', min: 10, max: 1000, step: 1, value: 128 },
+						{ name: '%', min: 1, max: 100, step: 1, value: 100 },
+					],
+					unit: "px",
 					changeProp: 1,
-				}],
+				}, {
+					label: " ",
+					name: "href",
+					type: "href",
+					href: "",
+					"data_href_type": "url",
+					changeProp: 1,
+					}],
 				resizable: {
 					tc: 0,
 					cl: 0,
@@ -305,23 +326,25 @@
 						});
 					}
 				}
-			}),
+			},
 		},
-			{
 				isComponent(el) {
 					if (el && el.classList && el.classList.contains('vj-image-gallery-item')) {
 						return { type: 'image-gallery-item' };
 					}
 				}
-			}),
-		view: imageView.extend({
+		,
+		view: {
 			events: {
 				dblclick: function () {
 					this.ShowModal()
 				},
 			},
 			init() {
-				this.listenTo(this.model.parent(), 'active', this.ActivateModal); // listen for active event
+				this.listenTo(this.model.parent(), 'active', this.ActivateModal);
+				this.listenTo(this.model, 'change:src', this.ChangeSrc);
+				this.listenTo(this.model, 'change:href', this.ChangeHref);
+				this.model.set('src', this.model.getAttributes()['data-src']);
 			},
 			ActivateModal() {
 				var Selected = this.model.collection.first();
@@ -337,6 +360,18 @@
 				var url = CurrentExtTabUrl + "&guid=a7a5e632-a73a-4792-8049-bc15a9435505#!/setting";
 				OpenPopUp(null, 900, 'right', 'Image', url, '', true);
 			},
-		}),
+			ChangeSrc() {
+				var src = this.model.attributes.src;
+				this.model.addAttributes({ 'data-src': src });
+			},
+			ChangeHref() {
+				var href = this.model.attributes.href;
+				if (href != "") {
+					const attr = this.model.getAttributes();
+					delete attr.onclick;
+					this.model.setAttributes(attr);
+				}
+			}
+		},
 	});
 }

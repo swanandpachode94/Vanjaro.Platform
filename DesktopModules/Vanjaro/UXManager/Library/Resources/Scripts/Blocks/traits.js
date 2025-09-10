@@ -10,17 +10,29 @@ export default (editor, config = {}) => {
 		const selected = VjEditor.getSelected();
 		const selectedType = selected.attributes.type;
 
-		if (selected.parent() && selected.parent().attributes.type != 'wrapper' && (selectedType == 'button' || selectedType == 'icon' || selectedType == 'list' || selectedType == 'image-gallery-item')) {
+		if (selected.parent() && selected.parent().attributes.type != 'wrapper' && (selectedType == 'row' || selectedType == 'button' || selectedType == 'icon' || selectedType == 'list')) {
 			var parent = selected.parent().clone();
 			var mainparent = selected.parent().parent();
 			mainparent.append(parent);
 		}
-		else if (selectedType == 'image' && selected.parent() && selected.parent().attributes.type != 'wrapper') {
-			var parent = selected.parent().parent().clone();
-			var mainparent = selected.parent().parent().parent();
+		else if (selectedType == 'image-gallery-item' && typeof selected.closestType('image-frame') != 'undefined') {
+			var parent = selected.closestType('image-frame').clone();
+			var mainparent = selected.closestType('image-frame').parent();
 			mainparent.append(parent);
 		}
+		else if (selectedType == 'image' && typeof selected.closestType('image-box') != 'undefined') {
+			var parent = selected.closestType('image-box').clone();
+			var mainparent = selected.closestType('image-box').parent();
+			mainparent.append(parent);
+		}
+		else {
+			var clone = selected.clone();
+			var parent = selected.parent();
+			parent.append(clone);
+		} 
 
+		VjEditor.select();
+		VjEditor.select(selected);
 	});
 
 	cmd.add('vj-delete', {
@@ -33,11 +45,14 @@ export default (editor, config = {}) => {
 			const selectedType = selected.attributes.type;
 			const selectedParentType = selected.parent().attributes.type;
 
-			if ((selectedType == 'button' && selectedParentType == 'button-box') || (selectedType == 'icon' && selectedParentType == 'icon-box') || (selectedType == 'list' && selectedParentType == 'list-box') || (selectedType == "image-gallery-item" && selected.parent().attributes.tagName == "picture")) {
+			if ((selectedType == 'row' && selectedParentType == 'grid') || (selectedType == 'button' && selectedParentType == 'button-box') || (selectedType == 'icon' && selectedParentType == 'icon-box') || (selectedType == 'list' && selectedParentType == 'list-box')) {
 				selected.parent().remove();
 			}
-			else if (selectedType == 'image' && typeof selected.parent().parent() != 'undefined' && selected.parent().parent().attributes.type == 'image-box') {
-				selected.parent().parent().remove();
+			else if (selectedType == 'image-gallery-item' && typeof selected.closestType('image-frame') != 'undefined') {
+				selected.closestType('image-frame').remove();
+			}
+			else if (selectedType == 'image' && typeof selected.closestType('image-box') != 'undefined') {
+				selected.closestType('image-box').remove();
 			}
 			else if (selectedType == 'column' && selectedParentType == 'row' && selected.parent().parent().attributes.type == 'grid') {
 				if (!selected.parent().components().length)
@@ -65,7 +80,7 @@ export default (editor, config = {}) => {
 			});
 		}
 
-		if (event.target.name == 'background' && mainComponent.getTrait("background").getInitValue() != 'gradient') {
+		if (event.target.name == 'background' && event.target.id != 'gradient') {
 			var style = component.getStyle();
 			style["background-image"] = "none";
 			style["background-color"] = "transparent";
@@ -105,7 +120,7 @@ export default (editor, config = {}) => {
 
 			if (event.target.name == 'stylee')
 				btnEnd += mainComponent.getTrait("color").getInitValue();
-			else if (event.target.name == 'color' && mainComponent.getTrait("stylee").getInitValue() == 'outline')
+			else if (event.target.name == 'color' && typeof mainComponent.getTrait("stylee") != "undefined" && mainComponent.getTrait("stylee").getInitValue() == 'outline')
 				btnStart += 'outline-';
 
 			var colorOpts = mainComponent.getTrait('color').attributes.options;
@@ -148,7 +163,7 @@ export default (editor, config = {}) => {
 			}
 		}
 
-		if (addClass && className != undefined && className != 'GJS_NO_CLASS') {
+		if (addClass && className != undefined && className != '' && className != 'GJS_NO_CLASS') {
 			const value_a = className.split(' ');
 			for (let i = 0; i < value_a.length; i++) {
 				if (comp == 'grid' && event.target.name == 'horizontalalignment')
@@ -164,16 +179,17 @@ export default (editor, config = {}) => {
 	};
 
 	//Color Picker
-	global.CustomColor = function () {
+	global.CustomColor = function (trait) {
 		var comp = VjEditor.getSelected();
-		var property = comp.getTrait($(event.target).parents(".colorPicker").attr("id")).attributes.cssproperties;
-		var color = comp.getTrait($(event.target).parents(".colorPicker").attr("id")).getInitValue();
-		var trait = comp.getTrait($(event.target).parents(".colorPicker").attr("id"));
+		var property = trait.attributes.cssproperties;
+		var color = trait.getInitValue();
 		var classes = [];
 		var model = comp;
 
-		if (typeof trait.attributes.selector != 'undefined')
-			model = comp.findType(trait.attributes.selector);
+		var selector = trait.attributes.selector;
+
+		if (typeof selector != 'undefined')
+			model = comp.find(selector);
 
 		$(model).each(function (index, item) {
 			var style = item.getStyle();
@@ -379,6 +395,13 @@ export default (editor, config = {}) => {
 			}
 		}
 
+		if (trait.attributes.type == 'toggle_checkbox' && !$(event.target.parentElement).find("input:checked").length) {
+
+			$(property).each(function (index, value) {
+				delete style[value.name];
+			});
+		}
+
 		if (event.target.name == "frame") {
 
 			if (event.target.value == "none") {
@@ -389,7 +412,6 @@ export default (editor, config = {}) => {
 				style["border-bottom-right-radius"] = "0";
 			}
 			else if (event.target.value == "circle") {
-				component.getTrait('framewidth').setTargetValue('10');
 				style["border-width"] = "10px";
 				style["border-top-left-radius"] = "50%";
 				style["border-top-right-radius"] = "50%";
@@ -397,7 +419,6 @@ export default (editor, config = {}) => {
 				style["border-bottom-right-radius"] = "50%";
 			}
 			else if (event.target.value == "square") {
-				component.getTrait('framewidth').setTargetValue('10');
 				style["border-width"] = "10px";
 				style["border-top-left-radius"] = "0";
 				style["border-top-right-radius"] = "0";
@@ -425,6 +446,9 @@ export default (editor, config = {}) => {
 		}
 		else
 			component.setStyle(style);
+
+		if (event.target.name == "frame" && (event.target.value == "circle" || event.target.value == "square"))
+			component.getTrait('framewidth').setTargetValue('10');
 	};
 
 	//Textarea
@@ -449,26 +473,10 @@ export default (editor, config = {}) => {
 			return el;
 		},
 		eventCapture: ['input'],
-		debounce: function (func, wait, immediate) {
-			var timeout;
-			return function () {
-				var context = this, args = arguments;
-				var later = function () {
-					timeout = null;
-					if (!immediate) func.apply(context, args);
-				};
-				var callNow = immediate && !timeout;
-				clearTimeout(timeout);
-				timeout = setTimeout(later, wait);
-				if (callNow) func.apply(context, args);
-			};
-		},
 		onEvent({ elInput, component, event }) {
-			if (event.type == 'change') {
-				var caption = elInput.querySelector('textarea').value;
-				component.addAttributes({ alt: caption });
-				component.getTrait('caption').setTargetValue(caption);
-			}
+
+			var caption = elInput.querySelector('textarea').value;
+			component.getTrait(event.target.name).setTargetValue(caption);
 		}
 	});
 
@@ -519,7 +527,7 @@ export default (editor, config = {}) => {
 			`;
 
 			var pid = trait.target.attributes.pid;
-			var href = trait.attributes.href || trait.target.attributes.href;
+			var href = trait.target.attributes.href || trait.attributes.href;
 			var options = el.querySelector('.option-block');
 			var wrapper = el.querySelector('.link-block');
 			var target = el.querySelector('.target-block');
@@ -626,20 +634,34 @@ export default (editor, config = {}) => {
 		onEvent({ elInput, component, event }) {
 
 			var href = '';
+			var model = component;
+			var compType = component.attributes.type;
+
+			if (compType == 'carousel-image')
+				model = component.closestType('carousel-link');
+			else if (compType == 'image' || compType == 'image-gallery-item')
+				model = component.closestType('image-frame');
 
 			var val = $(elInput).find('.option-block input:checked').attr("data-type");
 
 			switch (val) {
 				case 'url':
 					href = elInput.querySelector('.url').value;
+					delete component.attributes.pid
 					break;
 				case 'page':
 					var pid = $(elInput.querySelector('.page')).children("option:selected").attr('pid');
-					if (pid) {
+					if (typeof pid != 'undefined' && pid != 0) {
 						var sf = $.ServicesFramework(-1);
+
+						var absolutelLink = false;
+
+						if (this.model.attributes.absolutelink)
+							absolutelLink = this.model.attributes.absolutelink;
+
 						$.ajax({
 							type: "GET",
-							url: window.location.origin + $.ServicesFramework(-1).getServiceRoot("Vanjaro") + "Page/GetPageUrl?TabID=" + parseInt(pid),
+							url: window.location.origin + $.ServicesFramework(-1).getServiceRoot("Vanjaro") + "Page/GetPageUrl?TbID=" + parseInt(pid) + "&AbsolutelLink=" + absolutelLink,
 							headers: {
 								'ModuleId': parseInt(sf.getModuleId()),
 								'TabId': parseInt(sf.getTabId()),
@@ -661,9 +683,11 @@ export default (editor, config = {}) => {
 					var ID = elInput.querySelector('.email').value;
 					var Sub = elInput.querySelector('.subject').value;
 					href = `mailto:${ID}${Sub ? `?subject=${Sub}` : ''}`;
+					delete component.attributes.pid
 					break;
 				case 'phone':
 					var num = elInput.querySelector('.phone').value;
+					delete component.attributes.pid
 					href = `tel:${num}`;
 					break;
 			}
@@ -672,26 +696,44 @@ export default (editor, config = {}) => {
 
 				component.set({ href: href });
 
-				if (component.attributes.type == 'carousel-image')
-					component.parent().parent().addAttributes({ href: href });
-				else if (component.attributes.type == 'icon') {
+				if (compType == 'carousel-image' || compType == 'icon' || compType == 'image' || compType == 'image-gallery-item') {
 
 					if (href == "") {
-						component.attributes.tagName = 'span';
-						component.view.reset();
 
-						const attr = component.getAttributes();
+						if (model.attributes.tagName != 'span') {
+
+							model.attributes.tagName = 'span';
+							model.view.reset();
+
+							//Droppable in link
+							if (compType == 'icon')
+								component.addClass('icon-link');
+							else if (compType == 'image')
+								component.addClass('image-link');
+						}
+
+						const attr = model.getAttributes();
 						delete attr.href;
-						component.setAttributes(attr);
+						model.setAttributes(attr);
 					}
 					else {
 
-						component.attributes.tagName = 'a';
-						component.view.reset();
-						component.addAttributes({ href: href });
+						if (model.attributes.tagName != 'a') {
+
+							model.attributes.tagName = 'a';
+							model.view.reset();
+
+							//Not droppable in Link Group
+							if (compType == 'icon')
+								component.removeClass('icon-link');
+							else if (compType == 'image')
+								component.removeClass('image-link');
+						}
+
+						model.addAttributes({ href: href });
 
 						if (val != "page")
-							component.set({ 'pid': null });
+							model.set({ 'pid': null });
 					}
 				}
 				else
@@ -722,19 +764,21 @@ export default (editor, config = {}) => {
 				SetURL();
 			}
 			else if (event.target.name == "target") {
+
 				if (event.target.id == "yes") {
-					component.addAttributes({ 'target': '_blank', 'rel': 'noopener' });
+					model.addAttributes({ 'target': '_blank', 'rel': 'noopener' });
+					model.set({ 'target': 'yes' });
 				}
 				else {
-					const attr = component.getAttributes();
+					const attr = model.getAttributes();
 					delete attr.rel;
 					delete attr.target;
-					component.setAttributes(attr);
+					model.setAttributes(attr);
+					model.set({ 'target': 'no' });
 				}
 			}
-			else {
+			else
 				UXManager_Search();
-			}
 		}
 	});
 
@@ -756,17 +800,27 @@ export default (editor, config = {}) => {
 				input.setAttribute("name", trait.attributes.name);
 				input.setAttribute("id", value.id);
 				input.setAttribute("value", value.name);
+				input.setAttribute("title", value.title);
 
 				label.setAttribute("for", value.id);
 
+
 				if (typeof value.icon != 'undefined') {
+					if (typeof value.title != 'undefined')
+						label.innerHTML = value.title;
+
 					icon.setAttribute("class", value.icon);
 					label.appendChild(icon);
 				}
+
 				else if (typeof value.image != 'undefined') {
+					if (typeof value.title != 'undefined')
+						label.innerHTML = value.title;
+
 					img.setAttribute("src", VjDefaultPath + value.image + ".png");
 					label.appendChild(img);
 				}
+
 				else {
 					if (trait.target.attributes.type == "list")
 						label.innerHTML = value.name
@@ -790,70 +844,85 @@ export default (editor, config = {}) => {
 		},
 		onUpdate({ elInput, component, trait }) {
 
-			var property = '', value = trait.getInitValue();
+			if (trait.attributes.UpdateStyles) {
 
-			if (typeof trait.attributes.cssproperties != 'undefined')
-				property = trait.attributes.cssproperties[0].name;
+				var property = '', value = trait.getInitValue();
 
-			if (typeof event != 'undefined' && event.target.tagName.toLowerCase() != "input") {
+				if (typeof trait.attributes.cssproperties != 'undefined')
+					property = trait.attributes.cssproperties[0].name;
 
-				var model = component;
+				if (typeof event != 'undefined' && event.target.tagName.toLowerCase() != "input") {
 
-				if (typeof trait.attributes.selector != 'undefined') {
-
+					var model = component;
 					var selector = trait.attributes.selector;
 
-					if (trait.attributes.closest) {
-						if (typeof component.closestType(selector) != 'undefined')
-							model = component.closestType(selector);
-					}
-					else
-						model = component.findType(selector)[0];
-				}
+					if (typeof selector != 'undefined') {
 
-				if (property != '') {
-					if (typeof model.getStyle()[property] != 'undefined')
-						value = model.getStyle()[property].replace('!important', '');
-					else {
-						if (trait.attributes.name != 'alignment' && value != 'none')
-							value = $(model.view.el).css(property);
+						if (typeof component.parent() != 'undefined' && trait.attributes.closest) {
+							if (typeof component.closest(selector) != 'undefined' && component.closest(selector))
+								model = component.closest(selector);
+						}
+						else if (component.find(selector).length)
+							model = component.find(selector)[0];
 					}
-				}
 
-				if (value != "") {
-					trait.view.$el.find("input:checked").prop("checked", false);
-					trait.view.$el.find('input[value=' + value + ']').prop("checked", true);
+					if (property != '') {
+						if (typeof model.getStyle()[property] != 'undefined')
+							value = model.getStyle()[property].replace('!important', '');
+						else {
+							if (trait.attributes.name != 'alignment' && value != 'none')
+								value = $(model.view.el).css(property);
+						}
+					}
+
+					if (value != "") {
+						trait.view.$el.find("input:checked").prop("checked", false);
+						trait.view.$el.find('input[value=' + value + ']').prop("checked", true);
+					}
 				}
 			}
 		},
 		eventCapture: ['input'],
 		onEvent({ elInput, component, event }) {
 
-			$(event.target.parentElement).find("input:checked").not(event.target).prop('checked', false);
+			if (typeof component != 'undefined') {
 
-			var model = component;
-			var trait = component.getTrait(event.target.name);
+				$(event.target.parentElement).find("input:checked").not(event.target).prop('checked', false);
 
-			if (typeof trait.attributes.selector != 'undefined') {
-
+				var model = component;
+				var trait = component.getTrait(event.target.name);
 				var selector = trait.attributes.selector;
 
-				if (trait.attributes.closest) {
-					if (typeof component.closestType(selector) != 'undefined')
-						model = component.closestType(selector);
+				if (typeof selector != 'undefined') {
+
+					if (typeof component.parent() != 'undefined' && trait.attributes.closest) {
+						if (typeof component.closest(selector) != 'undefined' && component.closest(selector))
+							model = component.closest(selector);
+					}
+					else if (component.find(selector).length) {
+
+						var arr = [];
+
+						$(component.find(selector)).each(function (index, comp) {
+
+							var compID = comp.closestType(component.attributes.type).getId() || "";
+
+							if (compID == component.getId())
+								arr.push(comp);
+						});
+
+						model = arr;
+					}
 				}
-				else
-					model = component.findType(selector);
+
+				$(model).each(function (index, item) {
+
+					if (trait.attributes.UpdateStyles)
+						UpdateStyles(elInput, item, event, component);
+					else if (trait.attributes.SwitchClass)
+						SwitchClass(elInput, item, event, component);
+				});
 			}
-
-			$(model).each(function (index, item) {
-
-				if (trait.attributes.UpdateStyles)
-					UpdateStyles(elInput, item, event, component);
-				else if (trait.attributes.SwitchClass)
-					SwitchClass(elInput, item, event, component);
-
-			});
 		}
 	});
 
@@ -875,6 +944,7 @@ export default (editor, config = {}) => {
 				input.setAttribute("name", trait.attributes.name);
 				input.setAttribute("id", value.id);
 				input.setAttribute("value", value.name);
+				input.setAttribute("title", value.title);
 
 				if (trait.target.attributes.type == 'list' && trait.attributes.name == "ol_list_style")
 					input.setAttribute("value", value.id);
@@ -884,11 +954,19 @@ export default (editor, config = {}) => {
 
 				label.setAttribute("for", value.id);
 
+
 				if (typeof value.icon != 'undefined') {
+					if (typeof value.title != 'undefined')
+						label.innerHTML = value.title;
+
 					icon.setAttribute("class", value.icon);
 					label.appendChild(icon);
 				}
+
 				else if (typeof value.image != 'undefined') {
+					if (typeof value.title != 'undefined')
+						label.innerHTML = value.title;
+
 					img.setAttribute("src", VjDefaultPath + value.image + ".png");
 					label.appendChild(img);
 				}
@@ -915,39 +993,41 @@ export default (editor, config = {}) => {
 		},
 		onUpdate({ elInput, component, trait }) {
 
-			var property = '', value = trait.getInitValue();
+			if (trait.attributes.UpdateStyles) {
 
-			if (typeof trait.attributes.cssproperties != 'undefined')
-				property = trait.attributes.cssproperties[0].name;
+				var property = '', value = trait.getInitValue();
 
-			if (typeof event != 'undefined' && event.target.tagName.toLowerCase() != "input") {
+				if (typeof trait.attributes.cssproperties != 'undefined')
+					property = trait.attributes.cssproperties[0].name;
 
-				var model = component;
+				if (typeof event != 'undefined' && event.target.tagName.toLowerCase() != "input") {
 
-				if (typeof trait.attributes.selector != 'undefined') {
-
+					var model = component;
 					var selector = trait.attributes.selector;
 
-					if (trait.attributes.closest) {
-						if (typeof component.closestType(selector) != 'undefined')
-							model = component.closestType(selector);
-					}
-					else
-						model = component.findType(selector)[0];
-				}
+					if (typeof selector != 'undefined') {
 
-				if (property != '') {
-					if (typeof model.getStyle()[property] != 'undefined')
-						value = model.getStyle()[property].replace('!important', '');
-					else {
-						if (trait.attributes.name != 'alignment' && value != 'none')
-							value = $(model.view.el).css(property);
+						if (typeof component.parent() != 'undefined' && trait.attributes.closest) {
+							if (typeof component.closest(selector) != 'undefined' && component.closest(selector))
+								model = component.closest(selector);
+						}
+						else if (component.find(selector).length)
+							model = component.find(selector)[0];
 					}
-				}
 
-				if (value != "") {
-					trait.view.$el.find("input:checked").prop("checked", false);
-					trait.view.$el.find('input[value=' + value + ']').prop("checked", true);
+					if (property != '') {
+						if (typeof model.getStyle()[property] != 'undefined')
+							value = model.getStyle()[property].replace('!important', '');
+						else {
+							if (trait.attributes.name != 'alignment' && value != 'none')
+								value = $(model.view.el).css(property);
+						}
+					}
+
+					if (value != "") {
+						trait.view.$el.find("input:checked").prop("checked", false);
+						trait.view.$el.find('input[value=' + value + ']').prop("checked", true);
+					}
 				}
 			}
 
@@ -1180,17 +1260,16 @@ export default (editor, config = {}) => {
 						if (event.target.value == "yes") {
 
 							component.set({ 'autoplay': 'autoplaytrue' });
-							video.set({ 'autoplay': 1 });
-							video.addAttributes({ 'autoplay': true, 'muted': true });
+							video.addAttributes({ 'autoplay': true, 'muted': true, 'playsinline': true });
 						}
 						else {
 
 							component.set({ 'autoplay': 'autoplayfalse' });
-							video.set('autoplay', 0);
 
 							var attr = video.getAttributes();
 							delete attr.autoplay;
 							video.setAttributes(attr);
+							video.addAttributes({ 'autoplay': false, 'muted': false, 'playsinline': false });
 						}
 					}
 					else if (event.target.name == "loop") {
@@ -1198,13 +1277,11 @@ export default (editor, config = {}) => {
 						if (event.target.value == "yes") {
 
 							component.set({ 'loop': 'looptrue' });
-							video.set({ 'loop': 1 });
 							video.addAttributes({ 'loop': true });
 						}
 						else {
 
 							component.set({ 'loop': 'loopfalse' });
-							video.set('loop', 0);
 
 							var attr = video.getAttributes();
 							delete attr.loop;
@@ -1388,17 +1465,28 @@ export default (editor, config = {}) => {
 
 			var model = component;
 			var trait = component.getTrait(event.target.name);
+			var selector = trait.attributes.selector;
 
-			if (typeof trait.attributes.selector != 'undefined') {
+			if (typeof selector != 'undefined') {
 
-				var selector = trait.attributes.selector;
-
-				if (trait.attributes.closest) {
-					if (typeof component.closestType(selector) != 'undefined')
-						model = component.closestType(selector);
+				if (typeof component.parent() != 'undefined' && trait.attributes.closest) {
+					if (typeof component.closest(selector) != 'undefined' && component.closest(selector))
+						model = component.closest(selector);
 				}
-				else
-					model = component.findType(selector);
+				else if (component.find(selector).length) {
+
+					var arr = [];
+
+					$(component.find(selector)).each(function (index, comp) {
+
+						var compID = comp.closestType(component.attributes.type).getId() || "";
+
+						if (compID == component.getId())
+							arr.push(comp);
+					});
+
+					model = arr;
+				}
 			}
 
 			$(model).each(function (index, item) {
@@ -1461,32 +1549,28 @@ export default (editor, config = {}) => {
 
 				var BGcolor = $(this).css("background-color");
 				$(this).parents(".color-wrapper").find(".colorPicker").css("background-color", BGcolor).addClass('active');
-			});
 
-			$(editor.TraitManager.getType('color').prototype.getInputEl.apply(that, arguments)).on('show.spectrum', function (e, color) {
-
-				var traitsmanager = this.closest('.traitsmanager');
-
-				$(traitsmanager).click(function (event) {
-					event.stopPropagation();
-				});
-
-			});
-
-			$(editor.TraitManager.getType('color').prototype.getInputEl.apply(that, arguments)).on('move.spectrum change.spectrum', function (e, color) {
-
-				CustomColor();
-
-				var BGcolor = $(this).find(".gjs-field-color-picker").css("background-color");
-				$(this).parents(".color-wrapper").find(".colorPicker").css("background-color", BGcolor);
-
-				var classes = [];
 				var model = trait.target;
+				var selector = trait.attributes.selector;
 
-				if (typeof trait.attributes.selector != 'undefined')
-					model = trait.target.findType(trait.attributes.selector);
+				if (typeof selector != 'undefined') {
+
+					var arr = [];
+
+					$(trait.target.find(selector)).each(function (index, comp) {
+
+						var compID = comp.closestType(trait.target.attributes.type).getId() || "";
+
+						if (compID == trait.target.getId())
+							arr.push(comp);
+					});
+
+					model = arr;
+				}
 
 				$(model).each(function (index, item) {
+
+					var classes = [];
 
 					$(trait.attributes.cssproperties).each(function (index, property) {
 
@@ -1511,11 +1595,33 @@ export default (editor, config = {}) => {
 						item.removeClass(className);
 					});
 				});
+
+				trait.setTargetValue(BGcolor);
+				CustomColor(trait);
+			});
+
+			$(editor.TraitManager.getType('color').prototype.getInputEl.apply(that, arguments)).on('show.spectrum', function (e, color) {
+
+				var traitsmanager = this.closest('.traitsmanager');
+
+				$(traitsmanager).click(function (event) {
+					event.stopPropagation();
+				});
+
+			});
+
+			$(editor.TraitManager.getType('color').prototype.getInputEl.apply(that, arguments)).on('move.spectrum change.spectrum', function (e, color) {
+
+				CustomColor(trait);
+
+				var BGcolor = $(this).find(".gjs-field-color-picker").css("background-color");
+				$(this).parents(".color-wrapper").find(".colorPicker").css("background-color", BGcolor);
+
 			});
 
 			$(editor.TraitManager.getType('color').prototype.getInputEl.apply(that, arguments)).on('hide.spectrum', function (e, color) {
 
-				CustomColor();
+				CustomColor(trait);
 
 				var orignalColor = $(el).find('.gjs-field-color-picker').css('background-color');
 				$(el).find(".colorPicker").css("background-color", orignalColor);
@@ -1541,6 +1647,24 @@ export default (editor, config = {}) => {
 		onUpdate({ elInput, component, trait }) {
 
 			var property = trait.attributes.cssproperties[0].name;
+
+			var value = trait.getInitValue();
+
+			if (value != "" && value.indexOf('#') == -1 && value.indexOf('rgb') == -1) {
+
+				trait.view.$el.find("input:checked").prop("checked", false);
+				trait.view.$el.find(".active").removeClass("active");
+
+				trait.view.$el.find('input#' + value).prop("checked", true);
+				trait.view.$el.find('input#' + value).next().addClass("active");
+			}
+			else {
+
+				trait.view.$el.find("input:checked").prop("checked", false);
+				trait.view.$el.find(".active").removeClass("active");
+
+				trait.view.$el.find(".colorPicker").addClass('active');
+			}
 
 			if (typeof component.getStyle()[property] != "undefined") {
 
@@ -1572,31 +1696,46 @@ export default (editor, config = {}) => {
 		eventCapture: ['input'],
 		onEvent({ elInput, component, event }) {
 
-			var model = component;
-			var trait = component.getTrait(event.target.name);
+			if (typeof component != 'undefined') {
 
-			if (typeof trait != 'undefined' && typeof trait.attributes.selector != 'undefined') {
+				var model = component;
+				var trait = component.getTrait(event.target.name);
 
-				var selector = trait.attributes.selector;
+				if (typeof trait != 'undefined' && typeof trait.attributes.selector != 'undefined') {
 
-				if (trait.attributes.closest) {
-					if (typeof component.closestType(selector) != 'undefined')
-						model = component.closestType(selector);
+					var selector = trait.attributes.selector;
+
+					if (typeof component.parent() != 'undefined' && trait.attributes.closest) {
+						if (typeof component.closest(selector) != 'undefined' && component.closest(selector))
+							model = component.closest(selector);
+					}
+					else if (component.find(selector).length) {
+
+						var arr = [];
+
+						$(component.find(selector)).each(function (index, comp) {
+
+							var compID = comp.closestType(component.attributes.type).getId() || "";
+
+							if (compID == component.getId())
+								arr.push(comp);
+						});
+
+						model = arr;
+					}
 				}
-				else
-					model = component.findType(selector);
+
+				$(model).each(function (index, item) {
+
+					$(event.target).parents(".color-wrapper").find(".colorPicker").css("background-color", "transparent");
+					$(event.target).parents(".color-wrapper").find(".active").removeClass("active");
+					$(event.target.nextElementSibling).addClass("active");
+
+					if (typeof trait != 'undefined')
+						SwitchClass(elInput, item, event, component);
+
+				});
 			}
-
-			$(model).each(function (index, item) {
-
-				$(event.target).parents(".color-wrapper").find(".colorPicker").css("background-color", "transparent");
-				$(event.target).parents(".color-wrapper").find(".active").removeClass("active");
-				$(event.target.nextElementSibling).addClass("active");
-
-				if (typeof trait != 'undefined')
-					SwitchClass(elInput, item, event, component);
-
-			});
 		}
 	});
 
@@ -1646,8 +1785,21 @@ export default (editor, config = {}) => {
 
 			if (typeof event != 'undefined' && !event.target.classList.contains('input-control')) {
 
-				if (typeof component.getStyle()[property] != 'undefined')
-					value = component.getStyle()[property].replace('!important', '');
+				var model = component;
+				var selector = trait.attributes.selector;
+
+				if (typeof selector != 'undefined') {
+
+					if (typeof component.parent() != 'undefined' && trait.attributes.closest) {
+						if (typeof component.closest(selector) != 'undefined' && component.closest(selector))
+							model = component.closest(selector);
+					}
+					else if (component.find(selector).length)
+						model = component.find(selector)[0];
+				}
+
+				if (typeof model.getStyle()[property] != 'undefined')
+					value = model.getStyle()[property].replace('!important', '');
 				else
 					if (typeof trait.attributes.units != 'undefined')
 						value = '';
@@ -1692,7 +1844,7 @@ export default (editor, config = {}) => {
 				}
 
 				if (property != '' && unit == 'px')
-					inputValue = parseFloat($(component.view.el).css(property));
+					inputValue = parseFloat($(model.view.el).css(property));
 
 				trait.view.$el.find('select').val(unit);
 
@@ -1714,44 +1866,57 @@ export default (editor, config = {}) => {
 		eventCapture: ['input'],
 		onEvent({ elInput, component, event }) {
 
-			var model = component;
-			var trait = component.getTrait(event.target.name);
+			if (typeof component != 'undefined') {
 
-			if (typeof trait.attributes.selector != 'undefined') {
-
+				var model = component;
+				var trait = component.getTrait(event.target.name);
 				var selector = trait.attributes.selector;
 
-				if (trait.attributes.closest) {
-					if (typeof component.closestType(selector) != 'undefined')
-						model = component.closestType(selector);
-				}
-				else
-					model = component.findType(selector);
-			}
+				if (typeof selector != 'undefined') {
 
-			$(model).each(function (index, item) {
+					if (typeof component.parent() != 'undefined' && trait.attributes.closest) {
+						if (typeof component.closest(selector) != 'undefined' && component.closest(selector))
+							model = component.closest(selector);
+					}
+					else if (component.find(selector).length) {
 
-				UpdateStyles(elInput, item, event, component);
+						var arr = [];
 
-				if (item.attributes.type == 'section' && event.target.name == "angle") {
+						$(component.find(selector)).each(function (index, comp) {
 
-					var angle = event.target.value;
+							var compID = comp.closestType(component.attributes.type).getId() || "";
 
-					if (angle == '180')
-						angle = '0';
+							if (compID == component.getId())
+								arr.push(comp);
+						});
 
-					if (typeof item.getTrait('gradient').view.gp != 'undefined') {
-
-						const gp = item.getTrait('gradient').view.gp;
-						gp.setDirection(angle + 'deg');
-
-						var style = item.getStyle();
-						style["background-image"] = gp.getSafeValue();
-						item.setStyle(style);
+						model = arr;
 					}
 				}
 
-			});
+				$(model).each(function (index, item) {
+
+					UpdateStyles(elInput, item, event, component);
+
+					if (item.attributes.type == 'section' && event.target.name == "angle") {
+
+						var angle = event.target.value;
+
+						if (angle == '180')
+							angle = '0';
+
+						if (typeof item.getTrait('gradient').view.gp != 'undefined') {
+
+							const gp = item.getTrait('gradient').view.gp;
+							gp.setDirection(angle + 'deg');
+
+							var style = item.getStyle();
+							style["background-image"] = gp.getSafeValue();
+							item.setStyle(style);
+						}
+					}
+				});
+			}
 		}
 	});
 
@@ -1783,9 +1948,29 @@ export default (editor, config = {}) => {
 
 			var model = component;
 			var trait = component.getTrait(event.target.name);
+			var selector = trait.attributes.selector;
 
-			if (typeof trait.attributes.selector != 'undefined')
-				model = component.findType(trait.attributes.selector);
+			if (typeof selector != 'undefined') {
+
+				if (typeof component.parent() != 'undefined' && trait.attributes.closest) {
+					if (typeof component.closest(selector) != 'undefined' && component.closest(selector))
+						model = component.closest(selector);
+				}
+				else if (component.find(selector).length) {
+
+					var arr = [];
+
+					$(component.find(selector)).each(function (index, comp) {
+
+						var compID = comp.closestType(component.attributes.type).getId() || "";
+
+						if (compID == component.getId())
+							arr.push(comp);
+					});
+
+					model = arr;
+				}
+			}
 
 			$(model).each(function (index, item) {
 				UpdateStyles(elInput, item, event, component);
@@ -1822,7 +2007,7 @@ export default (editor, config = {}) => {
 			imgDelete.addEventListener('click', ev => {
 				if ($(ev.target).parents(".uploader-wrapper").attr("id") == "backgroundimage") {
 
-					var comp = VjEditor.getSelected();
+					var comp = editor.getSelected();
 					comp.removeStyle("background-image");
 					comp.set({ 'thumbnail': '', 'src': '' });
 
@@ -1834,8 +2019,8 @@ export default (editor, config = {}) => {
 				}
 				else if ($(ev.target).parents(".uploader-wrapper").attr("id") == "backgroundvideo") {
 
-					var comp = VjEditor.getSelected();
-					comp.components().forEach(item => item.getAttributes()["data-bg-video"] == 'true' ? item.remove() : null);
+					var comp = editor.getSelected();
+					comp.components().forEach(item => (typeof item != 'undefined' && item.getAttributes()["data-bg-video"] == 'true') ? item.remove() : null);
 					comp.set({ 'thumbnail': '', 'src': '' });
 					$(comp.getTrait("backgroundvideo").el).removeAttr("style");
 				}
@@ -1916,9 +2101,29 @@ export default (editor, config = {}) => {
 
 			var model = component;
 			var trait = component.getTrait(event.target.name);
+			var selector = trait.attributes.selector;
 
-			if (typeof trait.attributes.selector != 'undefined')
-				model = component.findType(trait.attributes.selector);
+			if (typeof selector != 'undefined') {
+
+				if (typeof component.parent() != 'undefined' && trait.attributes.closest) {
+					if (typeof component.closest(selector) != 'undefined' && component.closest(selector))
+						model = component.closest(selector);
+				}
+				else if (component.find(selector).length) {
+
+					var arr = [];
+
+					$(component.find(selector)).each(function (index, comp) {
+
+						var compID = comp.closestType(component.attributes.type).getId() || "";
+
+						if (compID == component.getId())
+							arr.push(comp);
+					});
+
+					model = arr;
+				}
+			}
 
 			$(model).each(function (index, item) {
 				if (item.attributes.type == 'videobox')
@@ -2005,11 +2210,11 @@ export default (editor, config = {}) => {
 			$(trait.attributes.options).each(function (index, value) {
 
 				var div = document.createElement('div');
+				var span = document.createElement('span');
 				var input = document.createElement('input');
 				var label = document.createElement("label");
-				var icon = document.createElement("em");
 
-				div.setAttribute("class", trait.attributes.name);
+				div.setAttribute("class", trait.attributes.name + " " + value.class);
 
 				input.setAttribute("type", "radio");
 				input.setAttribute("name", trait.attributes.name);
@@ -2020,12 +2225,13 @@ export default (editor, config = {}) => {
 				label.setAttribute("for", value.id);
 				label.setAttribute("class", value.class);
 				label.innerHTML = trait.target.getEl().textContent;
+				span.innerHTML = value.DisplayName;
+				span.setAttribute("class", "component-style");
 
-				icon.setAttribute("class", "fas fa-check-circle");
 
+				div.appendChild(span);
 				div.appendChild(input);
 				div.appendChild(label);
-				div.appendChild(icon);
 				el.appendChild(div);
 			});
 
@@ -2043,9 +2249,10 @@ export default (editor, config = {}) => {
 		onUpdate({ elInput, component, trait }) {
 
 			var model = component;
+			var selector = trait.attributes.selector;
 
-			if (typeof trait.attributes.selector != 'undefined')
-				model = component.findType(trait.attributes.selector)[0];
+			if (typeof selector != 'undefined')
+				model = component.find(selector)[0];
 
 			var text = model.getEl().textContent;
 			text = text.split(/\s+/).slice(0, 20).join(" ");
@@ -2059,20 +2266,7 @@ export default (editor, config = {}) => {
 
 					if (blockName == 'menu') {
 
-						$(item).html(`
-							<nav class="navbar navbar-expand-lg">
-								<div class="collapse navbar-collapse DefaultMenu scrollbar" id="DefaultMenu_132659749735737316">
-									<ul class="navbar-nav" id="navbar-menu">
-										<li class="first selected nav-item">
-											<a class="nav-link" href="#">${$(model.getEl()).find('.nav-link:eq(0)')[0].innerHTML}</a>
-										</li>
-										<li class="nav-item">
-											<a class="nav-link" href="#">${$(model.getEl()).find('.nav-link:eq(1)')[0].innerHTML}</a>
-										</li>
-									</ul>
-								</div>
-							</nav>
-						`);
+						$(item).html(model.getEl().innerHTML);
 					}
 					else if (blockName == 'breadcrumb' || blockName == 'language' || blockName == 'search input') {
 						$(item).html(model.getEl().innerHTML);
@@ -2097,15 +2291,42 @@ export default (editor, config = {}) => {
 			$(event.target).parents('.preset-wrapper').find('div.active').removeClass('active');
 			$(event.target).parent().addClass('active');
 
-			component.getTrait('styles').set({
-				'value': event.target.value
-			});
+			component.getTrait('styles').set({ 'value': event.target.value });
+
+			var capitalize = e => e.charAt(0).toUpperCase() + e.slice(1);
+			var selectedStyle = event.target.value;
+			var SelectedDisplayName = component.getTrait('styles').attributes.options.find(x => x.name === selectedStyle).DisplayName;
+
+			if (component.attributes.type == 'blockwrapper')
+				component.set('custom-name', capitalize(component.attributes.name) + ' - ' + SelectedDisplayName);
+			else
+				component.set('custom-name', capitalize(component.attributes.type) + ' - ' + SelectedDisplayName);
 
 			var model = component;
 			var trait = component.getTrait(event.target.name);
+			var selector = trait.attributes.selector;
 
-			if (typeof trait.attributes.selector != 'undefined')
-				model = component.findType(trait.attributes.selector);
+			if (typeof selector != 'undefined') {
+
+				if (typeof component.parent() != 'undefined' && trait.attributes.closest) {
+					if (typeof component.closest(selector) != 'undefined' && component.closest(selector))
+						model = component.closest(selector);
+				}
+				else if (component.find(selector).length) {
+
+					var arr = [];
+
+					$(component.find(selector)).each(function (index, comp) {
+
+						var compID = comp.closestType(component.attributes.type).getId() || "";
+
+						if (compID == component.getId())
+							arr.push(comp);
+					});
+
+					model = arr;
+				}
+			}
 
 			$(model).each(function (index, item) {
 
@@ -2130,6 +2351,31 @@ export default (editor, config = {}) => {
 				if (className != 'none')
 					item.addClass(className);
 			});
+		}
+	});
+
+	//Toggle
+	tm.addType('toggle', {
+		createInput({ trait }) {
+
+			const el = document.createElement('div');
+			el.classList.add("toggle-box");
+
+			el.innerHTML = `
+                <input type="checkbox" class="btn-check" name="${trait.attributes.name}" id="${trait.attributes.name}">
+                <label for="${trait.attributes.name}" class="toggle-option">${trait.attributes.label}
+                    <em class="fas fa-chevron-down float-end"></em>
+                </label> `;
+			return el;
+		},
+		onEvent({ elInput, component, event }) {
+
+			var trait = component.getTrait(event.target.name);
+
+			if ($(event.target).prop("checked"))
+				trait.setTargetValue('show');
+			else
+				trait.setTargetValue('hide');
 		}
 	});
 }

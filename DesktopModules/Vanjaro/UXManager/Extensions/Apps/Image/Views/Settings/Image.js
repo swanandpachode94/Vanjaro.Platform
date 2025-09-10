@@ -8,7 +8,7 @@
     $scope.targetParent;
 
     $scope.onInit = function () {
-        window.parent.window.VJIsSaveCall = false;
+        window.parent.window.VJIsSaveCall = true;
         $('.uiengine-wrapper a[data-target="#!/admin"]').addClass("active");
         $('.uiengine-wrapper a[data-target="#!/imageonline"]').removeClass("active");
         setTimeout(function () {
@@ -18,11 +18,19 @@
             $('[identifier="settings_image"]').find('.url-add .choosefile').html('<span style="font-family:Arial, Helvetica, sans-serif;">[L:Upload]</span>');
             $('[identifier="settings_image"]').find('.url-add .choosefile').addClass('fas fa-plus');
         }, 10);
+        if ($(window.parent.document.body).find('[data-bs-dismiss="modal"]').length <= 0)
+            $(window.parent.document.body).find('.btn-close').attr('data-bs-dismiss', 'modal');
         $(window.parent.document.body).find('[data-bs-dismiss="modal"]').on("click", function (e) {
-            window.parent.window.VJIsSaveCall = true;
+            window.parent.window.VJIsSaveCall = false;
             window.parent.VjEditor.runCommand("save");
         });
         $scope.BindFolderEvents();
+
+        if ($scope.ui.data.Folders.Value != undefined && $scope.ui.data.Folders.Value != null && parseInt($scope.ui.data.Folders.Value) > 0) {
+            setTimeout(function () {               
+                $('#folders' + $scope.ui.data.Folders.Value).trigger('click');
+            }, 200);
+        }
     };
 
     $scope.BindFolderEvents = function (fo) {
@@ -106,23 +114,31 @@
     };
 
     $scope.GetURL = function (fileid) {
-        window.parent.window.VJIsSaveCall = false;
-        common.webApi.post('Upload/GetUrl', 'fileid=' + fileid).then(function (data) {
+        window.parent.window.VJIsSaveCall = true;
+        var absolutelink = false;
+
+        if (window.parent.GetParameterByName('absolutelink', location.href) == "true")
+            absolutelink = true;
+
+        common.webApi.post('Upload/GetUrl', 'fileid=' + fileid + '&absolutelink=' + absolutelink.toString()).then(function (data) {
             if (data.data.Status == 'Success') {
                 var Link = data.data.Url;
 
                 var target = window.parent.document.vj_image_target;
 
-                if (target != undefined) {
+                var url = Link;
 
-                    var url = Link;
+                //checked background image has not changed
+                if(typeof target != 'undefined' && typeof target.attributes.type != 'undefined') {
 
-                    //checked background image has not changed
-                    if (typeof target.attributes.type != 'undefined') {
+                    if (target.attributes.optimize) {
 
-                        target.set('src', url);
+                        //target.set('src', url);
+                        target.addAttributes({ 'src': url });
+
                         if ($scope.targetParent == undefined)
                             $scope.targetParent = target.parent();
+
                         if (data.data.Urls.length)
                             parent.ChangeToWebp($scope.targetParent, data.data.Urls);
                         else {
@@ -134,9 +150,21 @@
                         }
                     }
                     else {
-                        var background = window.parent.VjEditor.StyleManager.getProperty('background_&_shadow', 'background');
-                        background.getCurrentLayer().attributes.properties.models.find(m => m.id == 'background-image').setValue(url);
+
+                        if (data.data.Urls.length)
+                            url = data.data.Urls.find(v => v.Type == 'webp').Url;
+
+                        target.set('src', url);
                     }
+                }
+                else {
+                    var background = window.parent.VjEditor.StyleManager.getProperty('background_&_shadow', 'background');
+
+                    if (data.data.Urls.length)
+                        url = data.data.Urls.find(v => v.Type == 'webp').Url;
+
+                    background.getCurrentLayer().attributes.properties.models.find(m => m.id == 'background-image').setValue(url);
+                    //background.getSelectedLayer().prop.attributes.properties.models.find(m => m.id == 'background-image-sub').setValue(url);
                 }
             }
             else {

@@ -110,6 +110,8 @@
             return { 'far fa-folder': true };
         else if (node.IsRedirectPage)
             return { 'fas fa-link': true };
+        else if (node.IsAnchorPage)
+            return { 'fas fa-hashtag': true };
         else
             return { 'fas fa-file': true };
     };
@@ -143,6 +145,8 @@
             return '[L:FolderPage]';
         else if (node.IsRedirectPage)
             return '[L:RedirectPage]';
+        else if (node.IsAnchorPage)
+            return '[L:AnchorPage]';
         else
             return '[L:Page]';
     };
@@ -217,7 +221,7 @@
         switch (type) {
             case "homepage":
                 if ($scope.ui.data.DefaultPagesSettingsRequest.Options.HomeTabId == node.Value) {
-                    $scope.ui.data.DefaultPagesSettingsRequest.Options.HomeTabId = null;
+                    $scope.ui.data.DefaultPagesSettingsRequest.Options.HomeTabId = -1;
                     type = 'RemoveFrom_' + type;
                 }
                 else {
@@ -227,7 +231,7 @@
                 break;
             case "loginpage":
                 if ($scope.ui.data.DefaultPagesSettingsRequest.Options.LoginTabId == node.Value) {
-                    $scope.ui.data.DefaultPagesSettingsRequest.Options.LoginTabId = null;
+                    $scope.ui.data.DefaultPagesSettingsRequest.Options.LoginTabId = -1;
                     type = 'RemoveFrom_' + type;
                 }
                 else {
@@ -237,7 +241,7 @@
                 break;
             case "registrationpage":
                 if ($scope.ui.data.DefaultPagesSettingsRequest.Options.RegisterTabId == node.Value) {
-                    $scope.ui.data.DefaultPagesSettingsRequest.Options.RegisterTabId = null;
+                    $scope.ui.data.DefaultPagesSettingsRequest.Options.RegisterTabId = -1;
                     type = 'RemoveFrom_' + type;
                 }
                 else {
@@ -247,7 +251,7 @@
                 break;
             case "userprofilepage":
                 if ($scope.ui.data.DefaultPagesSettingsRequest.Options.UserTabId == node.Value) {
-                    $scope.ui.data.DefaultPagesSettingsRequest.Options.UserTabId = null;
+                    $scope.ui.data.DefaultPagesSettingsRequest.Options.UserTabId = -1;
                     type = 'RemoveFrom_' + type;
                 }
                 else {
@@ -257,7 +261,7 @@
                 break;
             case "searchresultspage":
                 if ($scope.ui.data.DefaultPagesSettingsRequest.Options.SearchTabId == node.Value) {
-                    $scope.ui.data.DefaultPagesSettingsRequest.Options.SearchTabId = null;
+                    $scope.ui.data.DefaultPagesSettingsRequest.Options.SearchTabId = -1;
                     type = 'RemoveFrom_' + type;
                 }
                 else {
@@ -267,7 +271,7 @@
                 break;
             case "404errorpage":
                 if ($scope.ui.data.DefaultPagesSettingsRequest.Options.Custom404TabId == node.Value) {
-                    $scope.ui.data.DefaultPagesSettingsRequest.Options.Custom404TabId = null;
+                    $scope.ui.data.DefaultPagesSettingsRequest.Options.Custom404TabId = -1;
                     type = 'RemoveFrom_' + type;
                 }
                 else {
@@ -277,7 +281,7 @@
                 break;
             case "500errorpage":
                 if ($scope.ui.data.DefaultPagesSettingsRequest.Options.Custom500TabId == node.Value) {
-                    $scope.ui.data.DefaultPagesSettingsRequest.Options.Custom500TabId = null;
+                    $scope.ui.data.DefaultPagesSettingsRequest.Options.Custom500TabId = -1;
                     type = 'RemoveFrom_' + type;
                 }
                 else {
@@ -287,7 +291,7 @@
                 break;
             case "PrivacyTabId":
                 if ($scope.ui.data.DefaultPagesSettingsRequest.Options.PrivacyTabId == node.Value) {
-                    $scope.ui.data.DefaultPagesSettingsRequest.Options.PrivacyTabId = null;
+                    $scope.ui.data.DefaultPagesSettingsRequest.Options.PrivacyTabId = -1;
                     type = 'RemoveFrom_' + type;
                 }
                 else {
@@ -297,7 +301,7 @@
                 break;
             case "TermsTabId":
                 if ($scope.ui.data.DefaultPagesSettingsRequest.Options.TermsTabId == node.Value) {
-                    $scope.ui.data.DefaultPagesSettingsRequest.Options.TermsTabId = null;
+                    $scope.ui.data.DefaultPagesSettingsRequest.Options.TermsTabId = -1;
                     type = 'RemoveFrom_' + type;
                 }
                 else {
@@ -307,7 +311,7 @@
                 break;
             case "RedirectAfterRegistration":
                 if ($scope.ui.data.DefaultPagesSettingsRequest.Options.RedirectAfterRegistrationTabId == node.Value) {
-                    $scope.ui.data.DefaultPagesSettingsRequest.Options.RedirectAfterRegistrationTabId = null;
+                    $scope.ui.data.DefaultPagesSettingsRequest.Options.RedirectAfterRegistrationTabId = -1;
                     type = 'RemoveFrom_' + type;
                 }
                 else {
@@ -317,7 +321,7 @@
                 break;
             case "RedirectAfterLogin":
                 if ($scope.ui.data.DefaultPagesSettingsRequest.Options.RedirectAfterLoginTabId == node.Value) {
-                    $scope.ui.data.DefaultPagesSettingsRequest.Options.RedirectAfterLoginTabId = null;
+                    $scope.ui.data.DefaultPagesSettingsRequest.Options.RedirectAfterLoginTabId = -1;
                     type = 'RemoveFrom_' + type;
                 }
                 else {
@@ -327,7 +331,7 @@
                 break;
             case "RedirectAfterLogout":
                 if ($scope.ui.data.DefaultPagesSettingsRequest.Options.RedirectAfterLogoutTabId == node.Value) {
-                    $scope.ui.data.DefaultPagesSettingsRequest.Options.RedirectAfterLogoutTabId = null;
+                    $scope.ui.data.DefaultPagesSettingsRequest.Options.RedirectAfterLogoutTabId = -1;
                     type = 'RemoveFrom_' + type;
                 }
                 else {

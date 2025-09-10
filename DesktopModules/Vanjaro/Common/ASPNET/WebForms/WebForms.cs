@@ -12,20 +12,31 @@ namespace Vanjaro.Common.ASPNET
 {
     public class WebForms
     {
+        public enum Execution
+        {
+            none,
+            async,
+            defer
+        }
+
         private static int jsPriority = 101;
-        private static int cssPriority = 101;
 
-        public static void LinkCSS(Page Page, string ID, string URL)
+        public static void LinkCSS(Page Page, string ID, string URL, Execution execution = Execution.none)
         {
-            LinkCSS(Page, ID, URL, true);
+            LinkCSS(Page, ID, URL, true, execution);
         }
 
-        public static void LinkCSS(Page Page, string ID, string URL, bool Composite)
+        public static void LinkCSS(Page Page, string ID, string URL, bool Composite, Execution execution = Execution.none)
         {
-            LinkCSS(Page, ID, URL, true, "DnnPageHeaderProvider");
+            LinkCSS(Page, ID, URL, Composite, "DnnPageHeaderProvider", execution);
         }
 
-        public static void LinkCSS(Page Page, string ID, string URL, bool Composite, string Provider)
+        public static void LinkCSS(Page Page, string ID, string URL, bool Composite, string Provider, Execution execution = Execution.none)
+        {
+            LinkCSS(Page, ID, URL, Composite, Provider, 101, execution);
+        }
+
+        public static void LinkCSS(Page Page, string ID, string URL, bool Composite, string Provider, int Priority, Execution execution = Execution.none)
         {
             if (Composite)
             {
@@ -42,9 +53,22 @@ namespace Vanjaro.Common.ASPNET
 
                 if (Uri.IsWellFormedUriString(relativeURL, UriKind.Relative) && !relativeURL.Contains('?'))
                 {
-                    ClientResourceManager.RegisterStyleSheet(Page, relativeURL, cssPriority, Provider);
-                    cssPriority++;
-
+                    string HtmlAttribute = string.Empty;
+                    switch (execution)
+                    {
+                        case Execution.async:
+                            HtmlAttribute = "async:async";
+                            break;
+                        case Execution.defer:
+                            HtmlAttribute = "defer:defer";
+                            break;
+                    }
+                    var include = new DnnCssInclude { ForceProvider = Provider, Priority = Priority, FilePath = relativeURL, Name = string.Empty, Version = string.Empty, HtmlAttributesAsString = HtmlAttribute };
+                    var loader = Page.FindControl("ClientResourceIncludes");
+                    if (loader != null)
+                    {
+                        loader.Controls.Add(include);
+                    }
                     return;
                 }
             }
@@ -59,6 +83,52 @@ namespace Vanjaro.Common.ASPNET
                 if (!string.IsNullOrEmpty(URL))
                 {
                     lit.Text = "<link rel=\"stylesheet\" href=\"" + URL + "\" type=\"text/css\" media=\"all\" />";
+                    switch (execution)
+                    {
+                        case Execution.async:
+                            lit.Text = "<link rel=\"stylesheet\" href=\"" + URL + "\" type=\"text/css\" media=\"all\" async=\"async\" />";
+                            break;
+                        case Execution.defer:
+                            lit.Text = "<link rel=\"stylesheet\" href=\"" + URL + "\" type=\"text/css\" media=\"all\" defer=\"defer\" />";
+                            break;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(lit.Text))
+                {
+                    if (Priority == 0)
+                        Page.Header.Controls.AddAt(Priority, lit);
+                    else
+                        Page.Header.Controls.Add(lit);
+                }
+            }
+        }
+
+        public static void RegisterClientStyleBlock(Page Page, string ID, string Style, bool AddStyleTags, Execution execution = Execution.none)
+        {
+            if (Page.Header.FindControl(ID) == null)
+            {
+                LiteralControl lit = new LiteralControl
+                {
+                    ID = ID
+                };
+
+                if (AddStyleTags)
+                {
+                    lit.Text = "<style type=\"text/css\">" + Style + "</style>";
+                    switch (execution)
+                    {
+                        case Execution.async:
+                            lit.Text = "<style type=\"text/css\" async=\"async\">" + Style + "</style>";
+                            break;
+                        case Execution.defer:
+                            lit.Text = "<style type=\"text/css\" defer=\"defer\">" + Style + "</style>";
+                            break;
+                    }
+                }
+                else
+                {
+                    lit.Text = Style;
                 }
 
                 if (!string.IsNullOrEmpty(lit.Text))
@@ -68,17 +138,24 @@ namespace Vanjaro.Common.ASPNET
             }
         }
 
-        public static void RegisterClientScriptInclude(Page Page, string ID, string URL)
+        public static void RegisterClientScriptInclude(Page Page, string ID, string URL, Execution execution = Execution.none)
         {
-            RegisterClientScriptInclude(Page, ID, URL, true);
+            RegisterClientScriptInclude(Page, ID, URL, true, execution);
         }
 
-        public static void RegisterClientScriptInclude(Page Page, string ID, string URL, bool Composite)
+        public static void RegisterClientScriptInclude(Page Page, string ID, string URL, bool Composite, Execution execution = Execution.none)
         {
-            RegisterClientScriptInclude(Page, ID, URL, Composite, "DnnPageHeaderProvider");
+            RegisterClientScriptInclude(Page, ID, URL, Composite, "DnnPageHeaderProvider", execution);
         }
 
-        public static void RegisterClientScriptInclude(Page Page, string ID, string URL, bool Composite, string Provider)
+        public static void RegisterClientScriptInclude(Page Page, string ID, string URL, bool Composite, string Provider, Execution execution = Execution.none)
+        {
+            bool result = RegisterClientScriptInclude(Page, ID, URL, Composite, "DnnPageHeaderProvider", jsPriority, execution);
+            if (result)
+                jsPriority++;
+        }
+
+        public static bool RegisterClientScriptInclude(Page Page, string ID, string URL, bool Composite, string Provider, int Priority, Execution execution = Execution.none)
         {
             if (Composite)
             {
@@ -96,35 +173,67 @@ namespace Vanjaro.Common.ASPNET
 
                 if (Uri.IsWellFormedUriString(relativeURL, UriKind.Relative) && !relativeURL.Contains('?'))
                 {
-                    ClientResourceManager.RegisterScript(Page, relativeURL, jsPriority, Provider);
-                    jsPriority++;
-
-                    return;
+                    string HtmlAttribute = string.Empty;
+                    switch (execution)
+                    {
+                        case Execution.async:
+                            HtmlAttribute = "async:async";
+                            break;
+                        case Execution.defer:
+                            HtmlAttribute = "defer:defer";
+                            break;
+                    }
+                    var include = new DnnJsInclude { ForceProvider = Provider, Priority = Priority, FilePath = relativeURL, Name = string.Empty, Version = string.Empty, HtmlAttributesAsString = HtmlAttribute };
+                    var loader = Page.FindControl("ClientResourceIncludes");
+                    if (loader != null)
+                    {
+                        loader.Controls.Add(include);
+                    }
+                    return true;
                 }
             }
 
             if (Page.Header.FindControl(ID) == null)
             {
-                int PortalID = PortalSettings.Current.PortalId;
-                string CrmVersion = PortalController.GetPortalSetting("CrmVersion", PortalID, string.Empty);
-                string cdv = "cdv=" + CrmVersion;
+                string cdv = "cdv=" + Host.CrmVersion;
 
                 if (URL.Contains("?"))
                     cdv = "&" + cdv;
                 else
                     cdv = "?" + cdv;
 
+                string LiteralControlText = "<script src=\"" + URL + cdv + "\" type=\"text/javascript\"></script>";
+                switch (execution)
+                {
+                    case Execution.async:
+                        LiteralControlText = "<script src=\"" + URL + cdv + "\" type=\"text/javascript\" async=\"async\"></script>";
+                        break;
+                    case Execution.defer:
+                        LiteralControlText = "<script src=\"" + URL + cdv + "\" type=\"text/javascript\" defer=\"defer\"></script>";
+                        break;
+                }
+
                 LiteralControl lit = new LiteralControl
                 {
                     ID = ID,
-                    Text = "<script src=\"" + URL + cdv + "\" type=\"text/javascript\"></script>"
+                    Text = LiteralControlText
                 };
                 Page.Header.Controls.Add(lit);
             }
+            return false;
         }
-        public static void RegisterStartupScriptInclude(Page Page, string ID, string URL)
+        public static void RegisterStartupScriptInclude(Page Page, string ID, string URL, Execution execution = Execution.none)
         {
             string Script = "<script src=\"" + URL + "\" type=\"text/javascript\"></script>";
+            switch (execution)
+            {
+                case Execution.async:
+                    Script = "<script src=\"" + URL + "\" type=\"text/javascript\" async=\"async\"></script>";
+                    break;
+                case Execution.defer:
+                    Script = "<script src=\"" + URL + "\" type=\"text/javascript\" defer=\"defer\"></script>";
+                    break;
+            }
             RegisterStartupScript(Page, ID, Script, false);
         }
         public static void RegisterClientScriptBlock(Page Page, string ID, string Script, bool AddScriptTags)

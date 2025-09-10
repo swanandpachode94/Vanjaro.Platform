@@ -6,11 +6,13 @@ using DotNetNuke.Web.Api;
 using DotNetNuke.Web.Api.Internal;
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Web;
 using System.Web.Http;
 using Vanjaro.Common.ASPNET.WebAPI;
 using Vanjaro.Common.Engines.UIEngine;
+using Vanjaro.UXManager.Extensions.Block.Login.Entities;
 using Vanjaro.UXManager.Extensions.Block.Register.Entities;
 using Vanjaro.UXManager.Library.Common;
 using static Vanjaro.UXManager.Extensions.Block.Register.Managers;
@@ -50,16 +52,47 @@ namespace Vanjaro.UXManager.Extensions.Block.Register.Controllers
         {
             ActionResult actionResult = new ActionResult();
 
-            if (Core.Services.Captcha.Validate("signup"))
+            if (Core.Services.Captcha.Validate())
             {
                 try
                 {
+                    if (!string.IsNullOrEmpty(RegisterDetails.Email) && Core.Managers.LoginManager.IsInvalidEmail(RegisterDetails.Email.ToLower()))
+                    {
+                        actionResult.AddError("Register_Error", DotNetNuke.Services.Localization.Localization.GetString("InvalidEmail", Core.Components.Constants.LocalResourcesFile));
+                        return actionResult;
+                    }
+
                     RegisterManager.MapRegisterDetail(RegisterDetails);
                     if (RegisterManager.Validate())
                     {
                         if (PortalSettings.UserRegistration != (int)Globals.PortalRegistrationType.NoRegistration)
                         {
-                            actionResult = RegisterManager.CreateUser(RegisterDetails);
+                            string EmailVerification = Core.Managers.SettingManager.GetValue(PortalSettings.PortalId, 0, "setting_registration", "EmailVerification", null);
+                            bool verifyemail = (PortalSettings.UserRegistration == 2 && !string.IsNullOrEmpty(EmailVerification) && EmailVerification == "1") ? true : false;
+                            string VerificationMessage = null;
+                            if (!verifyemail || (verifyemail && !string.IsNullOrEmpty(RegisterDetails.VerificationCode) && Core.Managers.LoginManager.ValidateVerificationCode(PortalSettings.PortalId, RegisterDetails.Email, RegisterDetails.VerificationCode, out VerificationMessage)))
+                            {
+                                actionResult = RegisterManager.CreateUser(RegisterDetails);
+                                if (!this.PortalSettings.Registration.RandomPassword)
+                                {
+                                    dynamic eventArgs = Core.Managers.LoginManager.UserLogin(new UserLogin() { Email = RegisterDetails.Email, Password = RegisterDetails.Password, Username = RegisterDetails.UserName });
+                                    actionResult = Login.Managers.LoginManager.UserAuthenticated(eventArgs);
+                                    if (actionResult.IsSuccess)
+                                        actionResult.Data = new { RedirectURL = RegisterManager.GetRedirectUrl() };
+                                }
+                            }
+                            else if (!string.IsNullOrEmpty(VerificationMessage))
+                            {
+                                actionResult.AddError("Register_Error", VerificationMessage);
+                            }
+                            else
+                            {
+                                if (Core.Managers.LoginManager.SendVerificationCode(PortalSettings, RegisterDetails.Email))
+                                {
+                                    actionResult.Message = DotNetNuke.Services.Localization.Localization.GetString("Email_Code_Success", Core.Components.Constants.LocalResourcesFile);
+                                    actionResult.Data = new { ShowVerificationCode = true };
+                                }
+                            }
                         }
                         else
                         {

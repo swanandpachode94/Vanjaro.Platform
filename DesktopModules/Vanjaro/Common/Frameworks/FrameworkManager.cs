@@ -30,7 +30,7 @@ namespace Vanjaro.Common
             {"ColorPicker","" },
             {"ValidationJS","1.14.0"},
             {"jQueryAutocomplete","1.0.7"},
-            {"jQueryMoment","2.18.1"},
+            {"jQueryMoment","2.29.0"},
             {"jQuerySweetAlert","1.1.3"},
             {"Mark","8.9.1"},
             {"Numeral","2.0.6"},
@@ -38,7 +38,7 @@ namespace Vanjaro.Common
             {"JsonViewer",""},
             {"Barcode",""},
             {"Notify",""},
-            {"CodeMirror","5.48.4"},
+            {"CodeMirror","5.61.1"},
             {"Toastr","2.1.4"},
             {"ContextMenu","2.8.0"},
             {"BootstrapDatepicker","1.9.0"},
@@ -185,25 +185,24 @@ namespace Vanjaro.Common
                     }
                 case "Bootstrap":
                     {
-                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/bootstrap.min.css"));
-                        WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "js/bootstrap.min.js"), Composite, "DnnBodyProvider");
+                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/bootstrap.min.css"), Composite, "DnnPageHeaderProvider", 0);
+                        WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "js/bootstrap.bundle.min.js"), Composite, "DnnBodyProvider");
                         break;
                     }
                 case "FontAwesome":
                     {
-                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/fontawesome.css"));
-
+                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/fontawesome.css"), Composite);
                         break;
                     }
                 case "jQueryAutocomplete":
                     {
-                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/jquery.auto-complete.css"));
+                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/jquery.auto-complete.css"), Composite);
                         WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "js/jquery.auto-complete.min.js"), Composite);
                         break;
                     }
                 case "Mark":
                     {
-                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/mark.css"));
+                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/mark.css"), Composite);
                         WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "js/jquery.mark.min.js"), Composite);
                         break;
                     }
@@ -214,7 +213,7 @@ namespace Vanjaro.Common
                     }
                 case "jQuerySweetAlert":
                     {
-                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/sweetalert.css"));
+                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/sweetalert.css"), Composite);
                         WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "js/sweetalert.min.js"), Composite);
                         break;
                     }
@@ -263,7 +262,7 @@ namespace Vanjaro.Common
                     }
                 case "JsonViewer":
                     {
-                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "jquery.json-viewer.css"));
+                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "jquery.json-viewer.css"), Composite);
                         WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "jquery.json-viewer.js"), Composite);
                         break;
                     }
@@ -279,7 +278,7 @@ namespace Vanjaro.Common
                     }
                 case "CodeMirror":
                     {
-                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/codemirror.css"));
+                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/codemirror.css"), Composite);
                         WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "js/codemirror.js"), Composite);
                         WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "js/css.js"), Composite);
                         WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "js/htmlmixed.js"), Composite);
@@ -289,27 +288,27 @@ namespace Vanjaro.Common
                     }
                 case "Toastr":
                     {
-                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/toastr.min.css"));
+                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/toastr.min.css"), Composite);
                         WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "js/toastr.min.js"), Composite);
                         break;
                     }
                 case "ContextMenu":
                     {
-                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/jquery.contextMenu.min.css"));
+                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/jquery.contextMenu.min.css"), Composite);
                         WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "js/jquery.contextMenu.min.js"), Composite);
 
                         break;
                     }
                 case "BootstrapDatepicker":
                     {
-                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/bootstrap-datepicker.min.css"));
+                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/bootstrap-datepicker.min.css"), Composite);
                         WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "js/bootstrap-datepicker.min.js"), Composite);
 
                         break;
                     }
                 case "SpectrumColorPicker":
                     {
-                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/spectrum.min.css"));
+                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "css/spectrum.min.css"), Composite);
                         WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "js/spectrum.min.js"), Composite);
 
                         break;
@@ -319,7 +318,7 @@ namespace Vanjaro.Common
                         WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "kinetic.js"), Composite);
                         WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "jquery.scrollTo.min.js"), Composite);
                         WebForms.RegisterClientScriptInclude(Page, "VJ-" + Framework + "-JS", Request(Framework, "enjoyhint.min.js"), Composite);
-                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "enjoyhint.css"));
+                        WebForms.LinkCSS(Page, "VJ-" + Framework + "-CSS", Request(Framework, "enjoyhint.css"), Composite);
                         break;
                     }
                 default:
@@ -340,7 +339,6 @@ namespace Vanjaro.Common
 
         public enum Frameworks
         {
-            jQueryUI = 0,
             FontAwesome = 1
         }
         public enum JavaScriptPlugins

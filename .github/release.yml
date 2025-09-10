@@ -1,0 +1,22 @@
+# release.yml
+
+changelog:
+  exclude:
+    labels:
+      - 'ignore for release'
+  categories:
+    - title: Enhancements
+      labels:
+        - Enhancement
+    - title: Bug fixes
+      labels:
+        - Bug
+    - title: Applies to DNN Extension Only
+      labels: 
+        - 'Applies to: Extension Only'
+    - title: Dependencies
+      authors:
+       - dependabot
+    - title: Other Changes
+      labels:
+        - "*"

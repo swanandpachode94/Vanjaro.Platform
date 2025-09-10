@@ -1,4 +1,5 @@
 ﻿using Dnn.PersonaBar.Prompt.Components.Commands.Host;
+using DotNetNuke.Entities.Controllers;
 using DotNetNuke.Entities.Portals;
 using DotNetNuke.Web.Client.ClientResourceManagement;
 using Newtonsoft.Json;
@@ -73,6 +74,33 @@ namespace Vanjaro.Core
                 ITheme theme = GetThemes().Where(s => s.Name.ToLower() == name.ToLower()).FirstOrDefault();
                 if (theme != null)
                     return theme.GUID.ToString();
+                else
+                    return string.Empty;
+            }
+
+            public static string GetDesignScript(string name)
+            {
+                ITheme theme = GetThemes().Where(s => s.Name.ToLower() == name.ToLower()).FirstOrDefault();
+                if (theme != null)
+                    return theme.DesignScript.ToString();
+                else
+                    return string.Empty;
+            }
+
+            public static string GetAssembly(string name)
+            {
+                ITheme theme = GetThemes().Where(s => s.Name.ToLower() == name.ToLower()).FirstOrDefault();
+                if (theme != null)
+                    return theme.Assembly.ToString();
+                else
+                    return string.Empty;
+            }
+
+            public static string GetClientScript(string name)
+            {
+                ITheme theme = GetThemes().Where(s => s.Name.ToLower() == name.ToLower()).FirstOrDefault();
+                if (theme != null)
+                    return theme.ClientScript.ToString();
                 else
                     return string.Empty;
             }
@@ -184,12 +212,8 @@ namespace Vanjaro.Core
                     }
                 }
 
-                if (File.Exists(BeforePath))
-                {
-                    sb.Append(File.ReadAllText(BeforePath));
-                }
-
                 List<string> Css = new List<string>();
+                List<string> CssVariable = new List<string>();
                 foreach (IThemeEditor category in GetCategories(CheckVisibilityPermission).OrderBy(o => o.ViewOrder).ToList())
                 {
                     List<ThemeEditorValue> themeEditorValues = GetThemeEditorValues(PortalID, category.Guid);
@@ -216,7 +240,7 @@ namespace Vanjaro.Core
 
                                     if (!string.IsNullOrEmpty(DefaultValue) && !string.IsNullOrEmpty(variable) && variable.StartsWith("$"))
                                     {
-                                        Css.Add(variable + ":" + DefaultValue + " !default;");
+                                        CssVariable.Add(variable + ":" + DefaultValue + " !default;");
                                     }
 
                                     if (!string.IsNullOrEmpty(DefaultValue) && !string.IsNullOrEmpty(css))
@@ -241,6 +265,25 @@ namespace Vanjaro.Core
                     }
                 }
 
+                if (CssVariable != null && CssVariable.Count > 0)
+                {
+                    CssVariable = CssVariable.Distinct().ToList();
+                    foreach (string str in CssVariable)
+                    {
+                        sb.Append(str);
+                    }
+                }
+
+                if (File.Exists(BeforePath))
+                {
+                    sb.Append(File.ReadAllText(BeforePath));
+                }
+
+                if (File.Exists(BootstrapPath))
+                {
+                    sb.Append(File.ReadAllText(BootstrapPath));
+                }
+
                 if (Css != null && Css.Count > 0)
                 {
                     Css = Css.Distinct().ToList();
@@ -248,11 +291,6 @@ namespace Vanjaro.Core
                     {
                         sb.Append(str);
                     }
-                }
-
-                if (File.Exists(BootstrapPath))
-                {
-                    sb.Append(File.ReadAllText(BootstrapPath));
                 }
 
                 if (File.Exists(AfterPath))
@@ -309,7 +347,7 @@ namespace Vanjaro.Core
                 }
 
                 if (IncrementCrmVersion)
-                    PortalController.IncrementCrmVersion(PortalID);
+                    HostController.Instance.IncrementCrmVersion(false);
             }
 
             public static void Save(string CategoryGuid, List<ThemeEditorValue> ThemeEditorValues)

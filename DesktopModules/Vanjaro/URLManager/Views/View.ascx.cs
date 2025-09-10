@@ -31,7 +31,11 @@ namespace Vanjaro.URL.Views
         {
             get
             {
+#if DEBUG
                 return true;
+#else
+                return false;
+#endif
             }
         }
         public override string[] Dependencies
@@ -39,7 +43,6 @@ namespace Vanjaro.URL.Views
             get
             {
                 return new string[] {
-                    Frameworks.jQueryUI.ToString(),
                     Frameworks.FontAwesome.ToString()
                 };
             }

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Net.Mail;
 using System.Text;
 using Vanjaro.Common.Data.Entities;
+using Vanjaro.Common.Data.Scripts;
 using Vanjaro.Common.Factories;
 
 namespace Vanjaro.Common.Components
@@ -27,7 +28,9 @@ namespace Vanjaro.Common.Components
             {
                 lock (VanjaroCommonLock)
                 {
-                    ProcessMailQueue();//Run Every 2 Minute            
+                    ProcessMailQueue();//Run Every 2 Minute 
+
+                    DeleteVerificationCodes();
 
                     if (SchedulerLog.Count > 0)
                     {
@@ -65,10 +68,10 @@ namespace Vanjaro.Common.Components
             foreach (PortalInfo portalInfo in PortalController.Instance.GetPortals())
             {
                 SmtpClient client = null;
-                string NotificationEnabled = PortalController.GetPortalSetting("SMTPmode", portalInfo.PortalID, "");
+                string NotificationEnabled = PortalController.GetPortalSetting("SMTPmode", portalInfo.PortalID, "h");
                 if (!string.IsNullOrEmpty(NotificationEnabled))
                 {
-                    bool IsGlobal = NotificationEnabled == "h";
+                    bool IsGlobal = NotificationEnabled.Equals("h", StringComparison.OrdinalIgnoreCase);
                     SmtpServer SmtpServer = NotificationFactory.GetSMTP(IsGlobal, portalInfo.PortalID);
                     try
                     {
@@ -85,7 +88,7 @@ namespace Vanjaro.Common.Components
                                     {
                                         NotificationFactory.SendMail(client, mail);
                                         mail.Delete();
-                                        NotificationFactory.Log(new MailQueue_Log { PortalID = mail.PortalID, Subject = mail.Subject, ToEmail = mail.ToEmail });
+                                        NotificationFactory.Log(new MailQueue_Log { PortalID = mail.PortalID, Subject = mail.Subject, ToEmail = mail.ToEmail, LogType = 1 });
                                     }
                                     catch (Exception ex)
                                     {
@@ -188,7 +191,12 @@ namespace Vanjaro.Common.Components
 
         }
 
-
-
+        private void DeleteVerificationCodes()
+        {
+            using (CommonLibraryRepo db = new CommonLibraryRepo())
+            {
+                db.Execute("delete from " + CommonScript.TablePrefix + "VJ_Core_EmailVerification where CreatedOn<@0", DateTime.UtcNow.AddMinutes(-5));
+            }
+        }
     }
 }

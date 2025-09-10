@@ -154,6 +154,51 @@ namespace Vanjaro.Core
                             HostController.Instance.Update("DisableEditBar", "False");
                         }
                         break;
+                    case "01.01.00":
+                        UserInfo uInfo = UserController.Instance.GetCurrentUserInfo();
+                        foreach (PortalInfo pinfo in PortalController.Instance.GetPortals())
+                        {
+                            try
+                            {
+                                List<StringValue> SettingNameValue = new List<StringValue>
+                                {
+                                   new StringValue { Text = "ClientResourcesManagementMode", Value = "h" },
+                                   new StringValue { Text = ClientResourceSettings.OverrideDefaultSettingsKey, Value = "False" },
+                                };
+                                UpdatePortalSettings(SettingNameValue, pinfo.PortalID, uInfo.UserID);
+                            }
+                            catch (Exception ex)
+                            {
+                                ExceptionManager.LogException(ex);
+                            }
+                        }
+                        HostController.Instance.Update(ClientResourceSettings.EnableCompositeFilesKey, "True");
+                        HostController.Instance.Update(ClientResourceSettings.MinifyCssKey, "True");
+                        HostController.Instance.Update(ClientResourceSettings.MinifyJsKey, "True");
+                        break;
+                    case "01.02.00":
+                        {
+                            foreach (PortalInfo pinfo in PortalController.Instance.GetPortals())
+                            {
+                                ThemeEditorWrapper ThemeEditorWrapper = ThemeManager.GetThemeEditors(pinfo.PortalID, "be134fd2-3a3d-4460-8ee9-2953722a5ab2", false);
+                                if (ThemeEditorWrapper != null && ThemeEditorWrapper.Fonts != null)
+                                {
+                                    ThemeFont t = ThemeEditorWrapper.Fonts.Where(a => a.Name.ToLower() == "poppins").FirstOrDefault();
+                                    if (t == null)
+                                    {
+                                        t = GetDefaultFont().Where(a => a.Name.ToLower() == "poppins").FirstOrDefault();
+                                        if (t != null)
+                                            ThemeManager.UpdateFonts(pinfo.PortalID, "be134fd2-3a3d-4460-8ee9-2953722a5ab2", t, false);
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    case "01.03.01":
+                        {
+                            HostController.Instance.Update("HostTitle", "Vanjaro");
+                        }
+                        break;
                 }
             }
 
@@ -267,12 +312,13 @@ namespace Vanjaro.Core
                 #region Copy Vthemes in portal folder
                 try
                 {
-                    ThemeManager.ProcessScss(pinfo.PortalID, false);
+                    if (ApplyTemplates)
+                        ThemeManager.ProcessScss(pinfo.PortalID, false);
                 }
                 catch (Exception ex) { ExceptionManager.LogException(ex); }
 
                 string UXManagervDefaultPath = HttpContext.Current.Request.PhysicalApplicationPath + "DesktopModules\\Vanjaro\\Core\\Library\\Images";
-                if (Directory.Exists(UXManagervDefaultPath) && fi != null)
+                if (ApplyTemplates && Directory.Exists(UXManagervDefaultPath) && fi != null)
                 {
                     DirectoryInfo source = new DirectoryInfo(UXManagervDefaultPath);
                     foreach (System.IO.FileInfo _file in source.GetFiles())
@@ -314,7 +360,7 @@ namespace Vanjaro.Core
                     if (ApplyTemplates)
                     {
                         List<Layout> pageLayouts = GetLayouts(pinfo);
-                        ApplyDefaultLayouts(pinfo, uInfo, pageLayouts);
+                        ApplyDefaultLayouts(pinfo, uInfo, pageLayouts, string.Empty);
                         pinfo.LogoFile = fi.FolderPath + "Logo.svg";
                     }
 
@@ -333,7 +379,7 @@ namespace Vanjaro.Core
                     UpdatePortalSettings(SeoSettings, pinfo.PortalID, uInfo.UserID);
                     #endregion                    
                 }
-                if (!IsVanjaroInstalled && ApplyTemplates)
+                if (!IsVanjaroInstalled)
                 {
                     #region Signin Tab
                     if (pinfo.LoginTabId == -1)
@@ -377,7 +423,8 @@ namespace Vanjaro.Core
                         }
                         TabInfo SigninTab = TabController.Instance.GetTabByName("Signin", pinfo.PortalID);
                         List<Layout> pageLayouts = GetLayouts(pinfo);
-                        UpdateSignInTab(pinfo, uInfo, pageLayouts);
+                        if (ApplyTemplates)
+                            UpdateSignInTab(pinfo, uInfo, pageLayouts, ApplyTemplates, string.Empty);
                         if (SigninTab != null)
                         {
                             Core.Managers.LoginManager.AddUpdateLoginModule(SigninTab.TabID, pinfo.PortalID);
@@ -385,39 +432,41 @@ namespace Vanjaro.Core
 
                         pinfo.LoginTabId = SigninTab != null && !SigninTab.IsDeleted ? SigninTab.TabID : Null.NullInteger;
                     }
-                    #endregion
-
-                    #region Update Portal Settings
-                    IFileInfo file;
-                    if (fi != null)
-                    {
-                        if (FileManager.Instance.FileExists(fi, "vanjaro_social.png") && !PortalController.Instance.GetPortalSettings(pinfo.PortalID).ContainsKey("SocialSharingLogo"))
-                        {
-                            file = FileManager.Instance.GetFile(fi, "vanjaro_social.png");
-                            PortalController.UpdatePortalSetting(pinfo.PortalID, "SocialSharingLogo", "FileID=" + file.FileId, true, pinfo.CultureCode);
-                        }
-
-                        if (FileManager.Instance.FileExists(fi, "vanjaro_home.png") && !PortalController.Instance.GetPortalSettings(pinfo.PortalID).ContainsKey("HomeScreenIcon"))
-                        {
-                            file = FileManager.Instance.GetFile(fi, "vanjaro_home.png");
-                            PortalController.UpdatePortalSetting(pinfo.PortalID, "HomeScreenIcon", "FileID=" + file.FileId, true, pinfo.CultureCode);
-                        }
-                    }
                     PortalController.Instance.UpdatePortalInfo(pinfo);
-                    List<StringValue> SettingNameValue = new List<StringValue>
-                {
-                    new StringValue { Text = "DNN_Enabled", Value = "False" },
-                    new StringValue { Text = "Registration_UseEmailAsUserName", Value = "True" },
-                    new StringValue { Text = "ClientResourcesManagementMode", Value = "p" },
-                    new StringValue { Text = DotNetNuke.Web.Client.ClientResourceSettings.EnableCompositeFilesKey, Value = "True" },
-                    new StringValue { Text = DotNetNuke.Web.Client.ClientResourceSettings.MinifyCssKey, Value = "True" },
-                    new StringValue { Text = DotNetNuke.Web.Client.ClientResourceSettings.MinifyJsKey, Value = "True" },
-                    new StringValue { Text = DotNetNuke.Web.Client.ClientResourceSettings.OverrideDefaultSettingsKey, Value = "True" },
-                };
-                    int CrmVersion = Host.CrmVersion + 1;
-                    SettingNameValue.Add(new StringValue { Text = DotNetNuke.Web.Client.ClientResourceSettings.VersionKey, Value = CrmVersion.ToString() });
-                    UpdatePortalSettings(SettingNameValue, pinfo.PortalID, uInfo.UserID);
                     #endregion
+
+                    if (!IsVanjaroInstalled && ApplyTemplates)
+                    {
+                        #region Update Portal Settings
+                        IFileInfo file;
+                        if (fi != null)
+                        {
+                            if (FileManager.Instance.FileExists(fi, "vanjaro_social.png") && !PortalController.Instance.GetPortalSettings(pinfo.PortalID).ContainsKey("SocialSharingLogo"))
+                            {
+                                file = FileManager.Instance.GetFile(fi, "vanjaro_social.png");
+                                PortalController.UpdatePortalSetting(pinfo.PortalID, "SocialSharingLogo", "FileID=" + file.FileId, true, pinfo.CultureCode);
+                            }
+
+                            if (FileManager.Instance.FileExists(fi, "vanjaro_home.png") && !PortalController.Instance.GetPortalSettings(pinfo.PortalID).ContainsKey("HomeScreenIcon"))
+                            {
+                                file = FileManager.Instance.GetFile(fi, "vanjaro_home.png");
+                                PortalController.UpdatePortalSetting(pinfo.PortalID, "HomeScreenIcon", "FileID=" + file.FileId, true, pinfo.CultureCode);
+                            }
+                        }
+                        #endregion
+                    }
+
+                    if (!IsVanjaroInstalled)
+                    {
+                        List<StringValue> SettingNameValue = new List<StringValue>
+                        {
+                            new StringValue { Text = "DNN_Enabled", Value = "False" },
+                            new StringValue { Text = "Registration_UseEmailAsUserName", Value = "True" },
+                            new StringValue { Text = "ClientResourcesManagementMode", Value = "h" },
+                            new StringValue { Text = DotNetNuke.Web.Client.ClientResourceSettings.OverrideDefaultSettingsKey, Value = "False" },
+                        };
+                        UpdatePortalSettings(SettingNameValue, pinfo.PortalID, uInfo.UserID);
+                    }
                 }
 
                 #region Delete Unnecessary Files
@@ -451,13 +500,9 @@ namespace Vanjaro.Core
 
                 if (fi != null)
                     UpdateValue(pinfo.PortalID, 0, "security_settings", "Picture_DefaultFolder", fi.FolderID.ToString());
-
-                PortalController.UpdatePortalSetting(pinfo.PortalID, ClientResourceSettings.EnableCompositeFilesKey, "True");
-                PortalController.UpdatePortalSetting(pinfo.PortalID, ClientResourceSettings.MinifyCssKey, "True");
-                PortalController.UpdatePortalSetting(pinfo.PortalID, ClientResourceSettings.MinifyJsKey, "True");
             }
 
-            public static void UpdateSignInTab(PortalInfo pinfo, UserInfo uInfo, List<Layout> pageLayouts)
+            public static void UpdateSignInTab(PortalInfo pinfo, UserInfo uInfo, List<Layout> pageLayouts, bool ApplyTemplates, string portableModulesPath)
             {
                 TabInfo SigninTab = TabController.Instance.GetTabByName("Signin", pinfo.PortalID);
                 Layout Signinlayout = pageLayouts.Where(a => a.Name.ToLower().Replace(" ", "") == "signin").FirstOrDefault();
@@ -465,14 +510,17 @@ namespace Vanjaro.Core
                 Layout homelayout = pageLayouts.Where(a => a.Name == "Home").FirstOrDefault();
                 if (SigninTab != null && Signinlayout != null && portalSettings != null)
                 {
-                    ProcessBlocks(pinfo.PortalID, homelayout.Blocks);
-
                     if (portalSettings.ActiveTab == null)
                     {
                         portalSettings.ActiveTab = new TabInfo();
                     }
 
                     portalSettings.ActiveTab.TabID = SigninTab.TabID;
+
+                    if (ApplyTemplates)
+                        ProcessBlocks(portalSettings, uInfo, homelayout.Blocks, portableModulesPath);
+                    UpdateLayoutSettings(SigninTab, Signinlayout.Settings);
+
                     Dictionary<string, object> LayoutData = new Dictionary<string, object>
                     {
                         ["IsPublished"] = false,
@@ -481,8 +529,9 @@ namespace Vanjaro.Core
                         ["gjs-css"] = Managers.PageManager.DeTokenizeLinks(Signinlayout.Style.ToString(), pinfo.PortalID),
                         ["gjs-html"] = Managers.PageManager.DeTokenizeLinks(Signinlayout.Content.ToString(), pinfo.PortalID),
                         ["gjs-components"] = Managers.PageManager.DeTokenizeLinks(Signinlayout.ContentJSON.ToString(), pinfo.PortalID),
-                        ["gjs-styles"] = Managers.PageManager.DeTokenizeLinks(Signinlayout.StyleJSON.ToString(), pinfo.PortalID)
+                        ["styles"] = Managers.PageManager.DeTokenizeLinks(Signinlayout.StyleJSON.ToString(), pinfo.PortalID)
                     };
+                    PageManager.AddModules(portalSettings, LayoutData, uInfo, portableModulesPath);
                     Core.Managers.PageManager.Update(portalSettings, LayoutData);
 
 
@@ -501,7 +550,7 @@ namespace Vanjaro.Core
                 }
             }
 
-            public static void ApplyDefaultLayouts(PortalInfo pinfo, UserInfo uInfo, List<Layout> pageLayouts)
+            public static void ApplyDefaultLayouts(PortalInfo pinfo, UserInfo uInfo, List<Layout> pageLayouts, string portableModulesPath)
             {
                 #region Applying Layouts
 
@@ -511,14 +560,16 @@ namespace Vanjaro.Core
                 Layout Signuplayout = pageLayouts.Where(a => a.Name.ToLower().Replace(" ", "") == "signup").FirstOrDefault();
                 if (SignUpTab != null && Signuplayout != null && portalSettings != null)
                 {
-                    ProcessBlocks(pinfo.PortalID, Signuplayout.Blocks);
-
                     if (portalSettings.ActiveTab == null)
                     {
                         portalSettings.ActiveTab = new TabInfo();
                     }
 
                     portalSettings.ActiveTab.TabID = SignUpTab.TabID;
+
+                    ProcessBlocks(portalSettings, uInfo, Signuplayout.Blocks, portableModulesPath);
+                    UpdateLayoutSettings(SignUpTab, Signuplayout.Settings);
+
                     Dictionary<string, object> LayoutData = new Dictionary<string, object>
                     {
                         ["IsPublished"] = false,
@@ -527,8 +578,9 @@ namespace Vanjaro.Core
                         ["gjs-css"] = Managers.PageManager.DeTokenizeLinks(Signuplayout.Style.ToString(), pinfo.PortalID),
                         ["gjs-html"] = Managers.PageManager.DeTokenizeLinks(Signuplayout.Content.ToString(), pinfo.PortalID),
                         ["gjs-components"] = Managers.PageManager.DeTokenizeLinks(Signuplayout.ContentJSON.ToString(), pinfo.PortalID),
-                        ["gjs-styles"] = Managers.PageManager.DeTokenizeLinks(Signuplayout.StyleJSON.ToString(), pinfo.PortalID)
+                        ["styles"] = Managers.PageManager.DeTokenizeLinks(Signuplayout.StyleJSON.ToString(), pinfo.PortalID)
                     };
+                    PageManager.AddModules(portalSettings, LayoutData, uInfo, portableModulesPath);
                     Core.Managers.PageManager.Update(portalSettings, LayoutData);
 
                     Pages Page = Managers.PageManager.GetPages(SignUpTab.TabID).OrderByDescending(o => o.Version).FirstOrDefault();
@@ -552,14 +604,16 @@ namespace Vanjaro.Core
                     NotFoundPagelayout = pageLayouts.Where(a => a.Name.ToLower().Replace(" ", "") == "404errorpage").FirstOrDefault();
                 if (NotFoundTab != null && NotFoundPagelayout != null && portalSettings != null)
                 {
-                    ProcessBlocks(pinfo.PortalID, NotFoundPagelayout.Blocks);
-
                     if (portalSettings.ActiveTab == null)
                     {
                         portalSettings.ActiveTab = new TabInfo();
                     }
 
                     portalSettings.ActiveTab.TabID = NotFoundTab.TabID;
+
+                    ProcessBlocks(portalSettings, uInfo, NotFoundPagelayout.Blocks, portableModulesPath);
+                    UpdateLayoutSettings(NotFoundTab, NotFoundPagelayout.Settings);
+
                     Dictionary<string, object> LayoutData = new Dictionary<string, object>
                     {
                         ["IsPublished"] = false,
@@ -568,8 +622,9 @@ namespace Vanjaro.Core
                         ["gjs-css"] = Managers.PageManager.DeTokenizeLinks(NotFoundPagelayout.Style.ToString(), pinfo.PortalID),
                         ["gjs-html"] = Managers.PageManager.DeTokenizeLinks(NotFoundPagelayout.Content.ToString(), pinfo.PortalID),
                         ["gjs-components"] = Managers.PageManager.DeTokenizeLinks(NotFoundPagelayout.ContentJSON.ToString(), pinfo.PortalID),
-                        ["gjs-styles"] = Managers.PageManager.DeTokenizeLinks(NotFoundPagelayout.StyleJSON.ToString(), pinfo.PortalID)
+                        ["styles"] = Managers.PageManager.DeTokenizeLinks(NotFoundPagelayout.StyleJSON.ToString(), pinfo.PortalID)
                     };
+                    PageManager.AddModules(portalSettings, LayoutData, uInfo, portableModulesPath);
                     Core.Managers.PageManager.Update(portalSettings, LayoutData);
 
                     Pages Page = Managers.PageManager.GetPages(NotFoundTab.TabID).OrderByDescending(o => o.Version).FirstOrDefault();
@@ -593,14 +648,17 @@ namespace Vanjaro.Core
                 Layout Profilelayout = pageLayouts.Where(a => a.Name.ToLower().Replace(" ", "") == "profile").FirstOrDefault();
                 if (ProfileTab != null && Profilelayout != null && portalSettings != null)
                 {
-                    ProcessBlocks(pinfo.PortalID, Profilelayout.Blocks);
-                    pinfo.UserTabId = ProfileTab.TabID;
                     if (portalSettings.ActiveTab == null)
                     {
                         portalSettings.ActiveTab = new TabInfo();
                     }
 
                     portalSettings.ActiveTab.TabID = ProfileTab.TabID;
+
+                    ProcessBlocks(portalSettings, uInfo, Profilelayout.Blocks, portableModulesPath);
+                    UpdateLayoutSettings(ProfileTab, Profilelayout.Settings);
+                    pinfo.UserTabId = ProfileTab.TabID;
+
                     Dictionary<string, object> LayoutData = new Dictionary<string, object>
                     {
                         ["IsPublished"] = false,
@@ -609,8 +667,9 @@ namespace Vanjaro.Core
                         ["gjs-css"] = Managers.PageManager.DeTokenizeLinks(Profilelayout.Style.ToString(), pinfo.PortalID),
                         ["gjs-html"] = Managers.PageManager.DeTokenizeLinks(Profilelayout.Content.ToString(), pinfo.PortalID),
                         ["gjs-components"] = Managers.PageManager.DeTokenizeLinks(Profilelayout.ContentJSON.ToString(), pinfo.PortalID),
-                        ["gjs-styles"] = Managers.PageManager.DeTokenizeLinks(Profilelayout.StyleJSON.ToString(), pinfo.PortalID)
+                        ["styles"] = Managers.PageManager.DeTokenizeLinks(Profilelayout.StyleJSON.ToString(), pinfo.PortalID)
                     };
+                    PageManager.AddModules(portalSettings, LayoutData, uInfo, portableModulesPath);
                     Core.Managers.PageManager.Update(portalSettings, LayoutData);
 
                     Pages Page = Managers.PageManager.GetPages(ProfileTab.TabID).OrderByDescending(o => o.Version).FirstOrDefault();
@@ -633,13 +692,16 @@ namespace Vanjaro.Core
                 Layout SearchResultlayout = pageLayouts.Where(a => a.Name.ToLower().Replace(" ", "") == "searchresults").FirstOrDefault();
                 if (SearchResultTab != null && SearchResultlayout != null && portalSettings != null)
                 {
-                    ProcessBlocks(pinfo.PortalID, SearchResultlayout.Blocks);
                     if (portalSettings.ActiveTab == null)
                     {
                         portalSettings.ActiveTab = new TabInfo();
                     }
 
                     portalSettings.ActiveTab.TabID = SearchResultTab.TabID;
+
+                    ProcessBlocks(portalSettings, uInfo, SearchResultlayout.Blocks, portableModulesPath);
+                    UpdateLayoutSettings(SearchResultTab, SearchResultlayout.Settings);
+
                     Dictionary<string, object> LayoutData = new Dictionary<string, object>
                     {
                         ["IsPublished"] = false,
@@ -648,8 +710,9 @@ namespace Vanjaro.Core
                         ["gjs-css"] = Managers.PageManager.DeTokenizeLinks(SearchResultlayout.Style.ToString(), pinfo.PortalID),
                         ["gjs-html"] = Managers.PageManager.DeTokenizeLinks(SearchResultlayout.Content.ToString(), pinfo.PortalID),
                         ["gjs-components"] = Managers.PageManager.DeTokenizeLinks(SearchResultlayout.ContentJSON.ToString(), pinfo.PortalID),
-                        ["gjs-styles"] = Managers.PageManager.DeTokenizeLinks(SearchResultlayout.StyleJSON.ToString(), pinfo.PortalID)
+                        ["styles"] = Managers.PageManager.DeTokenizeLinks(SearchResultlayout.StyleJSON.ToString(), pinfo.PortalID)
                     };
+                    PageManager.AddModules(portalSettings, LayoutData, uInfo, portableModulesPath);
                     Core.Managers.PageManager.Update(portalSettings, LayoutData);
 
                     Pages Page = Managers.PageManager.GetPages(SearchResultTab.TabID).OrderByDescending(o => o.Version).FirstOrDefault();
@@ -672,13 +735,16 @@ namespace Vanjaro.Core
                 Layout Termslayout = pageLayouts.Where(a => a.Name.ToLower().Replace(" ", "") == "terms").FirstOrDefault();
                 if (TermsTab != null && Termslayout != null && portalSettings != null)
                 {
-                    ProcessBlocks(pinfo.PortalID, Termslayout.Blocks);
                     if (portalSettings.ActiveTab == null)
                     {
                         portalSettings.ActiveTab = new TabInfo();
                     }
 
                     portalSettings.ActiveTab.TabID = TermsTab.TabID;
+
+                    ProcessBlocks(portalSettings, uInfo, Termslayout.Blocks, portableModulesPath);
+                    UpdateLayoutSettings(TermsTab, Termslayout.Settings);
+
                     Dictionary<string, object> LayoutData = new Dictionary<string, object>
                     {
                         ["IsPublished"] = false,
@@ -687,8 +753,9 @@ namespace Vanjaro.Core
                         ["gjs-css"] = Managers.PageManager.DeTokenizeLinks(Termslayout.Style.ToString(), pinfo.PortalID),
                         ["gjs-html"] = Managers.PageManager.DeTokenizeLinks(Termslayout.Content.ToString(), pinfo.PortalID),
                         ["gjs-components"] = Managers.PageManager.DeTokenizeLinks(Termslayout.ContentJSON.ToString(), pinfo.PortalID),
-                        ["gjs-styles"] = Managers.PageManager.DeTokenizeLinks(Termslayout.StyleJSON.ToString(), pinfo.PortalID)
+                        ["styles"] = Managers.PageManager.DeTokenizeLinks(Termslayout.StyleJSON.ToString(), pinfo.PortalID)
                     };
+                    PageManager.AddModules(portalSettings, LayoutData, uInfo, portableModulesPath);
                     Core.Managers.PageManager.Update(portalSettings, LayoutData);
 
                     Pages Page = Managers.PageManager.GetPages(TermsTab.TabID).OrderByDescending(o => o.Version).FirstOrDefault();
@@ -710,13 +777,16 @@ namespace Vanjaro.Core
                 Layout Privacylayout = pageLayouts.Where(a => a.Name.ToLower().Replace(" ", "") == "privacy").FirstOrDefault();
                 if (PrivacyTab != null && Privacylayout != null && portalSettings != null)
                 {
-                    ProcessBlocks(pinfo.PortalID, Privacylayout.Blocks);
                     if (portalSettings.ActiveTab == null)
                     {
                         portalSettings.ActiveTab = new TabInfo();
                     }
 
                     portalSettings.ActiveTab.TabID = PrivacyTab.TabID;
+
+                    ProcessBlocks(portalSettings, uInfo, Privacylayout.Blocks, portableModulesPath);
+                    UpdateLayoutSettings(PrivacyTab, Privacylayout.Settings);
+
                     Dictionary<string, object> LayoutData = new Dictionary<string, object>
                     {
                         ["IsPublished"] = false,
@@ -725,8 +795,9 @@ namespace Vanjaro.Core
                         ["gjs-css"] = Managers.PageManager.DeTokenizeLinks(Privacylayout.Style.ToString(), pinfo.PortalID),
                         ["gjs-html"] = Managers.PageManager.DeTokenizeLinks(Privacylayout.Content.ToString(), pinfo.PortalID),
                         ["gjs-components"] = Managers.PageManager.DeTokenizeLinks(Privacylayout.ContentJSON.ToString(), pinfo.PortalID),
-                        ["gjs-styles"] = Managers.PageManager.DeTokenizeLinks(Privacylayout.StyleJSON.ToString(), pinfo.PortalID)
+                        ["styles"] = Managers.PageManager.DeTokenizeLinks(Privacylayout.StyleJSON.ToString(), pinfo.PortalID)
                     };
+                    PageManager.AddModules(portalSettings, LayoutData, uInfo, portableModulesPath);
                     Core.Managers.PageManager.Update(portalSettings, LayoutData);
 
                     Pages Page = Managers.PageManager.GetPages(PrivacyTab.TabID).OrderByDescending(o => o.Version).FirstOrDefault();
@@ -748,14 +819,14 @@ namespace Vanjaro.Core
                 Layout homelayout = pageLayouts.Where(a => a.Name.ToLower().Replace(" ", "") == "home").FirstOrDefault();
                 if (HomeTab != null && homelayout != null && portalSettings != null)
                 {
-                    ProcessBlocks(pinfo.PortalID, homelayout.Blocks);
-
                     if (portalSettings.ActiveTab == null)
                     {
                         portalSettings.ActiveTab = new TabInfo();
                     }
 
                     portalSettings.ActiveTab.TabID = HomeTab.TabID;
+                    ProcessBlocks(portalSettings, uInfo, homelayout.Blocks, portableModulesPath);
+                    UpdateLayoutSettings(HomeTab, homelayout.Settings);
                     PortalController.UpdatePortalSetting(pinfo.PortalID, "Redirect_AfterLogin", HomeTab.TabID.ToString(), false, portalSettings.CultureCode, false);
                     Dictionary<string, object> LayoutData = new Dictionary<string, object>
                     {
@@ -765,8 +836,9 @@ namespace Vanjaro.Core
                         ["gjs-css"] = Managers.PageManager.DeTokenizeLinks(homelayout.Style.ToString(), pinfo.PortalID),
                         ["gjs-html"] = Managers.PageManager.DeTokenizeLinks(homelayout.Content.ToString(), pinfo.PortalID),
                         ["gjs-components"] = Managers.PageManager.DeTokenizeLinks(homelayout.ContentJSON.ToString(), pinfo.PortalID),
-                        ["gjs-styles"] = Managers.PageManager.DeTokenizeLinks(homelayout.StyleJSON.ToString(), pinfo.PortalID)
+                        ["styles"] = Managers.PageManager.DeTokenizeLinks(homelayout.StyleJSON.ToString(), pinfo.PortalID)
                     };
+                    PageManager.AddModules(portalSettings, LayoutData, uInfo, portableModulesPath);
                     Core.Managers.PageManager.Update(portalSettings, LayoutData);
 
                     Pages Page = Managers.PageManager.GetPages(HomeTab.TabID).OrderByDescending(o => o.Version).FirstOrDefault();
@@ -793,7 +865,29 @@ namespace Vanjaro.Core
                 pinfo.PrivacyTabId = PrivacyTab != null && !PrivacyTab.IsDeleted ? PrivacyTab.TabID : Null.NullInteger;
                 #endregion
             }
-
+            public static void UpdateLayoutSettings(TabInfo tab, Dictionary<string, dynamic> settings)
+            {
+                if (tab != null && settings != null && settings.Count > 0)
+                {
+                    settings.Add("NewTabID", tab.TabID);
+                    if (settings.ContainsKey("TabVisible"))
+                        tab.IsVisible = settings["TabVisible"];
+                    if (settings.ContainsKey("TabDisableLink"))
+                        tab.DisableLink = settings["TabDisableLink"];
+                    if (settings.ContainsKey("TabUrl"))
+                        tab.Url = settings["TabUrl"];
+                    if (settings.ContainsKey("TabPermanentRedirect"))
+                        tab.PermanentRedirect = settings["TabPermanentRedirect"];
+                    TabController.Instance.UpdateTab(tab);
+                    if (settings.ContainsKey("TabSettings"))
+                    {
+                        foreach (var setting in settings["TabSettings"])
+                        {
+                            TabController.Instance.UpdateTabSetting(tab.TabID, setting.Name.ToString(), setting.Value.ToString());
+                        }
+                    }
+                }
+            }
             private static void UpdatePortalSettings(List<StringValue> SettingNameValue, int PortalID, int UserID)
             {
                 string query = string.Empty;
@@ -807,7 +901,7 @@ namespace Vanjaro.Core
                     db.Execute(query);
                 }
             }
-            public static void ProcessBlocks(int PortalId, List<GlobalBlock> Blocks)
+            public static void ProcessBlocks(PortalSettings ps, UserInfo UInfo, List<GlobalBlock> Blocks, string portableModulesPath)
             {
                 if (Blocks != null)
                 {
@@ -815,25 +909,27 @@ namespace Vanjaro.Core
                     {
                         if (string.IsNullOrEmpty(item.Html) && string.IsNullOrEmpty(item.Css))
                         {
-                            if (BlockManager.GetCustomByGuid(PortalId, item.Guid) == null)
+                            if (BlockManager.GetCustomByGuid(ps.PortalId, item.Guid) == null)
                             {
                                 item.ID = 0;
-                                PortalSettings ps = new PortalSettings
-                                {
-                                    PortalId = PortalId
-                                };
                                 BlockManager.Add(ps, item, 1);
                             }
                         }
                         else
                         {
-                            if (BlockManager.GetGlobalByLocale(PortalId, item.Guid, null) == null)
+                            if (BlockManager.GetGlobalByLocale(ps.PortalId, item.Guid, null) == null)
                             {
                                 item.ID = 0;
-                                PortalSettings ps = new PortalSettings
+
+                                Dictionary<string, object> LayoutData = new Dictionary<string, object>
                                 {
-                                    PortalId = PortalId
+                                    ["gjs-html"] = item.Html.ToString(),
+                                    ["gjs-components"] = item.ContentJSON.ToString()
                                 };
+                                PageManager.AddModules(ps, LayoutData, UInfo, portableModulesPath, true);
+                                item.Html = LayoutData["gjs-html"].ToString();
+                                item.ContentJSON = LayoutData["gjs-components"].ToString();
+
                                 BlockManager.Add(ps, item, 1);
                             }
                         }
@@ -940,6 +1036,8 @@ namespace Vanjaro.Core
                 themeFont.Add(new ThemeFont() { Name = "Times New Roman", Family = "Times New Roman, Times, serif", Css = string.Empty, Guid = Guid.NewGuid().ToString() });
                 themeFont.Add(new ThemeFont() { Name = "Trebuchet MS", Family = "Trebuchet MS, Helvetica, sans-serif", Css = string.Empty, Guid = Guid.NewGuid().ToString() });
                 themeFont.Add(new ThemeFont() { Name = "Verdana", Family = "Verdana, Geneva, sans - serif", Css = string.Empty, Guid = Guid.NewGuid().ToString() });
+                string PoppinsCss = "/* devanagari */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 300;\n src: local(\"Poppins Light\"), local(\"Poppins-Light\"), url(../../../_default/vThemes/Basic/fonts/pxiByp8kv8JHgFVrLDz8Z11lFc-K.woff2) format(\"woff2\");\n unicode-range: U+0900-097F, U+1CD0-1CF6, U+1CF8-1CF9, U+200C-200D, U+20A8, U+20B9, U+25CC, U+A830-A839, U+A8E0-A8FB; }\n\n/* latin-ext */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 300;\n src: local(\"Poppins Light\"), local(\"Poppins-Light\"), url(../../../_default/vThemes/Basic/fonts/pxiByp8kv8JHgFVrLDz8Z1JlFc-K.woff2) format(\"woff2\");\n unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF; }\n\n/* latin */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 300;\n src: local(\"Poppins Light\"), local(\"Poppins-Light\"), url(../../../_default/vThemes/Basic/fonts/pxiByp8kv8JHgFVrLDz8Z1xlFQ.woff2) format(\"woff2\");\n unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }\n\n/* devanagari */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 400;\n src: local(\"Poppins Regular\"), local(\"Poppins-Regular\"), url(../../../_default/vThemes/Basic/fonts/pxiEyp8kv8JHgFVrJJbecmNE.woff2) format(\"woff2\");\n unicode-range: U+0900-097F, U+1CD0-1CF6, U+1CF8-1CF9, U+200C-200D, U+20A8, U+20B9, U+25CC, U+A830-A839, U+A8E0-A8FB; }\n\n/* latin-ext */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 400;\n src: local(\"Poppins Regular\"), local(\"Poppins-Regular\"), url(../../../_default/vThemes/Basic/fonts/pxiEyp8kv8JHgFVrJJnecmNE.woff2) format(\"woff2\");\n unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF; }\n\n/* latin */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 400;\n src: local(\"Poppins Regular\"), local(\"Poppins-Regular\"), url(../../../_default/vThemes/Basic/fonts/pxiEyp8kv8JHgFVrJJfecg.woff2) format(\"woff2\");\n unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }\n\n/* devanagari */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 500;\n src: local(\"Poppins Medium\"), local(\"Poppins-Medium\"), url(../../../_default/vThemes/Basic/fonts/pxiByp8kv8JHgFVrLGT9Z11lFc-K.woff2) format(\"woff2\");\n unicode-range: U+0900-097F, U+1CD0-1CF6, U+1CF8-1CF9, U+200C-200D, U+20A8, U+20B9, U+25CC, U+A830-A839, U+A8E0-A8FB; }\n\n/* latin-ext */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 500;\n src: local(\"Poppins Medium\"), local(\"Poppins-Medium\"), url(../../../_default/vThemes/Basic/fonts/pxiByp8kv8JHgFVrLGT9Z1JlFc-K.woff2) format(\"woff2\");\n unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF; }\n\n/* latin */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 500;\n src: local(\"Poppins Medium\"), local(\"Poppins-Medium\"), url(../../../_default/vThemes/Basic/fonts/pxiByp8kv8JHgFVrLGT9Z1xlFQ.woff2) format(\"woff2\");\n unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }\n\n/* devanagari */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 600;\n src: local(\"Poppins SemiBold\"), local(\"Poppins-SemiBold\"), url(../../../_default/vThemes/Basic/fonts/pxiByp8kv8JHgFVrLEj6Z11lFc-K.woff2) format(\"woff2\");\n unicode-range: U+0900-097F, U+1CD0-1CF6, U+1CF8-1CF9, U+200C-200D, U+20A8, U+20B9, U+25CC, U+A830-A839, U+A8E0-A8FB; }\n\n/* latin-ext */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 600;\n src: local(\"Poppins SemiBold\"), local(\"Poppins-SemiBold\"), url(../../../_default/vThemes/Basic/fonts/pxiByp8kv8JHgFVrLEj6Z1JlFc-K.woff2) format(\"woff2\");\n unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF; }\n\n/* latin */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 600;\n src: local(\"Poppins SemiBold\"), local(\"Poppins-SemiBold\"), url(../../../_default/vThemes/Basic/fonts/pxiByp8kv8JHgFVrLEj6Z1xlFQ.woff2) format(\"woff2\");\n unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }\n\n/* devanagari */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 700;\n src: local(\"Poppins Bold\"), local(\"Poppins-Bold\"), url(../../../_default/vThemes/Basic/fonts/pxiByp8kv8JHgFVrLCz7Z11lFc-K.woff2) format(\"woff2\");\n unicode-range: U+0900-097F, U+1CD0-1CF6, U+1CF8-1CF9, U+200C-200D, U+20A8, U+20B9, U+25CC, U+A830-A839, U+A8E0-A8FB; }\n\n/* latin-ext */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 700;\n src: local(\"Poppins Bold\"), local(\"Poppins-Bold\"), url(../../../_default/vThemes/Basic/fonts/pxiByp8kv8JHgFVrLCz7Z1JlFc-K.woff2) format(\"woff2\");\n unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF; }\n\n/* latin */\n@font-face {\n font-family: 'Poppins';\n font-style: normal;\n font-weight: 700;\n src: local(\"Poppins Bold\"), local(\"Poppins-Bold\"), url(../../../_default/vThemes/Basic/fonts/pxiByp8kv8JHgFVrLCz7Z1xlFQ.woff2) format(\"woff2\");\n unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }";
+                themeFont.Add(new ThemeFont() { Name = "Poppins", Family = "Poppins, sans-serif", Css = PoppinsCss, Guid = Guid.NewGuid().ToString() });
                 return themeFont;
             }
 

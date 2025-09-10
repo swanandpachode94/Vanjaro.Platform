@@ -2,10 +2,17 @@
     var common = CommonSvc.getData($scope);
     //Init Scope
     $scope.onInit = function () {
+        $('.VjName').keypress(function (event) {
+            var keycode = (event.keyCode ? event.keyCode : event.which);
+            if (keycode == '13') {
+                event.preventDefault();
+            }
+        });
     };
 
     $scope.openIconPopup = function () {
-        window.parent.OpenPopUp(null, 700, 'right', 'Select Icon', window.parent.CurrentExtTabUrl + '&guid=85682cd1-d5fd-4611-b252-3bc1972545a0&ignoregj=true#!/setting', '', '', false);
+        if ($(window.parent.document.body).find('.modal-body iframe').length < 2)
+            window.parent.OpenPopUp(null, 700, 'right', 'Select Icon', window.parent.CurrentExtTabUrl + '&guid=85682cd1-d5fd-4611-b252-3bc1972545a0&ignoregj=true#!/setting', '', '', false);
     };
 
     $scope.Click_Save = function (type) {
@@ -23,5 +30,5 @@
                 }
             });
         };
-    }
+    };
 });

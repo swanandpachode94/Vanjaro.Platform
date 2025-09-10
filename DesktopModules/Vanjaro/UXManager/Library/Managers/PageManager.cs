@@ -104,7 +104,7 @@ namespace Vanjaro.UXManager.Library
                     result.Add(new PageItem() { Text = page.Text, Value = page.Value });
                     if (page.children != null && page.children.Count > 0)
                     {
-                        BindChildPages(result, page.children, "-");
+                        BindChildPages(result, page.children, "- ");
                     }
                 }
                 return result;
@@ -117,18 +117,24 @@ namespace Vanjaro.UXManager.Library
                     result.Add(new PageItem() { Text = prefix + " " + page.Text, Value = page.Value });
                     if (page.children != null && page.children.Count > 0)
                     {
-                        BindChildPages(result, page.children, prefix + ".");
+                        BindChildPages(result, page.children, prefix + "- ");
                     }
                 }
             }
 
-            public static string GetPageUrl(PortalSettings PortalSettings, int TabID)
+            public static string GetPageUrl(PortalSettings PortalSettings, int TabID, bool AbsolutelLink)
             {
                 TabInfo tab = TabController.Instance.GetTab(TabID, PortalSettings.PortalId, true);
                 if (tab != null)
                 {
+                    if(tab.DisableLink && tab.TabSettings != null && tab.TabSettings.ContainsKey("AnchorID") && !string.IsNullOrEmpty(tab.TabSettings["AnchorID"]?.ToString()))
+                        return TabController.Instance.GetTab(Convert.ToInt32(tab.TabSettings["AnchorPageID"]), PortalSettings.Current.PortalId).FullUrl + "#" + tab.TabSettings["AnchorID"];
+
                     string flaggedUrl = Globals.FriendlyUrl(tab, Globals.ApplicationURL(TabID), PortalSettings as IPortalSettings);
-                    return Globals.ResolveUrl(Regex.Replace(flaggedUrl, string.Format("{0}://{1}", HttpContext.Current.Request.Url.Scheme, Globals.GetDomainName(HttpContext.Current.Request, true)), "~", RegexOptions.IgnoreCase));
+                    if (AbsolutelLink)
+                        return flaggedUrl;
+                    else
+                        return Globals.ResolveUrl(Regex.Replace(flaggedUrl, string.Format("{0}://{1}", HttpContext.Current.Request.Url.Scheme, Globals.GetDomainName(HttpContext.Current.Request, true)), "~", RegexOptions.IgnoreCase));
                 }
                 return string.Empty;
             }
@@ -213,8 +219,9 @@ namespace Vanjaro.UXManager.Library
                     tab.DisableLink = (page.TabPermissions.Where(t => t != null && t.RoleID == -1 && t.AllowAccess == true).FirstOrDefault() != null) ? false : true;
                     tab.TabName = page.TabName;
                     tab.TabID = page.TabID;
+                    tab.TabType = GetTabType(page);
                     RootCategory.Add(tab);
-                    RootCategory.AddRange(GetPagesChildPages(page.TabID, "-", portalSettings, DisableLink));
+                    RootCategory.AddRange(GetPagesChildPages(page.TabID, "- ", portalSettings, DisableLink));
                 }
                 return RootCategory;
             }
@@ -241,8 +248,9 @@ namespace Vanjaro.UXManager.Library
                     childTab.DisableLink = (item.TabPermissions.Where(t => t != null && t.RoleID == -1 && t.AllowAccess == true).FirstOrDefault() != null) ? false : true;
                     childTab.TabName = NamePrefix + " " + item.TabName.TrimStart('-');
                     childTab.TabID = item.TabID;
+                    childTab.TabType = GetTabType(item);
                     ChildPages.Add(childTab);
-                    ChildPages.AddRange(GetPagesChildPages(item.TabID, NamePrefix + "-", portalSettings, DisableLink));
+                    ChildPages.AddRange(GetPagesChildPages(item.TabID, NamePrefix + "- ", portalSettings, DisableLink));
                 }
                 return ChildPages;
             }
@@ -327,7 +335,7 @@ namespace Vanjaro.UXManager.Library
                 {
                     URL += "&TabId=" + TabID;
 
-                    if (LocaleController.Instance.GetLocales(pS.PortalId).Count() > 1)
+                    if (LocaleController.Instance.GetLocales(pS.PortalId).Count() > 1 && !string.IsNullOrEmpty(Language))
                         URL += "&language=" + Language;
                 }
                 URL += QueryParameters;
@@ -345,7 +353,16 @@ namespace Vanjaro.UXManager.Library
                 return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
             }
 
+            private static string GetTabType(TabInfo tab)
+            {
+                string TabType = tab.TabType.ToString().ToLower();
+                if (!tab.TabSettings.ContainsKey("AnchorID") && tab.DisableLink)
+                    TabType = "folder";
+                else if (tab.TabSettings.ContainsKey("AnchorID") && tab.DisableLink)
+                    TabType = "anchor";
 
+                return TabType;
+            }
         }
     }
 }

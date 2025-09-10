@@ -2,7 +2,7 @@
 using DotNetNuke.Entities.Tabs;
 using DotNetNuke.Framework;
 using DotNetNuke.Security.Permissions;
-using DotNetNuke.Services.Localization;
+using Localization = DotNetNuke.Services.Localization.Localization;
 using DotNetNuke.Services.Url.FriendlyUrl;
 using DotNetNuke.UI.ControlPanels;
 using Newtonsoft.Json;
@@ -25,13 +25,17 @@ using Vanjaro.UXManager.Library.Entities.Enum;
 using static Vanjaro.UXManager.Library.Managers;
 using System.Net;
 using Vanjaro.Common.Utilities;
+using DotNetNuke.UI.Skins.Controls;
+using DotNetNuke.Common;
+using DotNetNuke.Entities.Users;
+using DotNetNuke.Application;
 
 namespace Vanjaro.UXManager.Library
 {
     public partial class Base : ControlPanelBase
     {
         private string TemplateLibraryURL = string.Empty;
-        private string ExtensionStoreURL = string.Empty;
+        public static string ExtensionStoreURL = string.Empty;
         private string ExtensionURL = string.Empty;
         private bool? m2v = null;
 
@@ -44,10 +48,10 @@ namespace Vanjaro.UXManager.Library
         {
 #if RELEASE
             TemplateLibraryURL = "https://library.vanjaro.cloud/templates/tid/" + Core.Managers.ThemeManager.CurrentTheme.GUID.ToLower() + "/type/block";
-            ExtensionStoreURL = "~" + Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/placeholder.html");
+            ExtensionStoreURL = "https://store.vanjaro.cloud/install?mode=" + Vanjaro.Common.Components.Product.SKU + "&vjver=" + Core.Managers.SettingManager.GetVersion().TrimEnd('0').TrimEnd('.');
 # else
-            TemplateLibraryURL = "http://library.vanjaro.local/templates/tid/" + Core.Managers.ThemeManager.CurrentTheme.GUID.ToLower()+"/type/block";
-            ExtensionStoreURL = "http://store.vanjaro.local/store";
+            TemplateLibraryURL = "http://library.vanjaro.local/templates/tid/" + Core.Managers.ThemeManager.CurrentTheme.GUID.ToLower() + "/type/block";
+            ExtensionStoreURL = "http://store.vanjaro.local/install?mode=" + Vanjaro.Common.Components.Product.SKU + "&vjver=" + Core.Managers.SettingManager.GetVersion().TrimEnd('0').TrimEnd('.');
 #endif
             ExtensionURL = ServiceProvider.NavigationManager.NavigateURL().ToLower().Replace(PortalSettings.Current.DefaultLanguage.ToLower(), PortalSettings.Current.CultureCode.ToLower()).TrimEnd('/') + MenuManager.GetURL() + "mid=0&icp=true&guid=54caeff2-9fac-42ae-8594-40312867d56a#!/installpackage";
 
@@ -105,24 +109,34 @@ namespace Vanjaro.UXManager.Library
                         }
                     }
 
-                    WebForms.LinkCSS(Page, "UXManagerAppCss", Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/StyleSheets/app.css"));
+                    try
+                    {
+                        string Fonts = JsonConvert.SerializeObject(Core.Managers.ThemeManager.GetDDLFonts("all"));
+                        WebForms.RegisterClientScriptBlock(Page, "VJThemeFonts", "var VJFonts=" + Fonts + ";", true);
+                    }
+                    catch (Exception) { }
 
-
-                    WebForms.LinkCSS(Page, "GrapesJsCss", Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/Scripts/GrapesJs/css/grapes.min.css"));
-                    WebForms.LinkCSS(Page, "GrapickJsCss", Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/Scripts/GrapesJs/css/grapick.min.css"));
-                    WebForms.LinkCSS(Page, "GrapesJsPanelCss", Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/Scripts/jsPanel/jspanel.min.css"));
+                    WebForms.LinkCSS(Page, "UXManagerAppCss", Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/StyleSheets/app.css"), true, "DnnBodyProvider");
+                    WebForms.LinkCSS(Page, "GrapesJsCss", Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/Scripts/GrapesJs/css/grapes.min.css"), false);
+                    WebForms.LinkCSS(Page, "GrapickJsCss", Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/Scripts/GrapesJs/css/grapick.min.css"), false);
+                    WebForms.LinkCSS(Page, "GrapesJsPanelCss", Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/Scripts/jsPanel/jspanel.min.css"), false);
                     WebForms.RegisterClientScriptInclude(Page, "CustomCodeJs", Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/Scripts/Blocks/custom-code.js"), false);
                     WebForms.RegisterClientScriptInclude(Page, "GrapesJsJs", Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/Scripts/uxmanager.min.js"), false);
-                    WebForms.LinkCSS(Page, "GrapesJspluginCss", Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/Scripts/GrapesJsManagers/css/uxmanager.css"));
+                    WebForms.LinkCSS(Page, "GrapesJspluginCss", Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/Scripts/GrapesJsManagers/css/uxmanager.css"), true, "DnnBodyProvider");
                     WebForms.LinkCSS(Page, "FontawesomeV4Css", Page.ResolveUrl("~/DesktopModules/Vanjaro/UXManager/Library/Resources/Scripts/GrapesJs/css/fontawesome/v4.css"));
+
+                    LocalizeThemeJS();
+
+                    if (!string.IsNullOrEmpty(Core.Managers.ThemeManager.CurrentTheme.Assembly) && !string.IsNullOrEmpty(Core.Managers.ThemeManager.CurrentTheme.DesignScript) && !Core.Entities.Editor.Options.Blocks)
+                        ScriptManager.RegisterClientScriptBlock(this, this.GetType(), "ThemeDesignScript", "<script type=\"text/javascript\" src=\"" + Page.ClientScript.GetWebResourceUrl(Type.GetType(Core.Managers.ThemeManager.CurrentTheme.Assembly), Core.Managers.ThemeManager.CurrentTheme.DesignScript) + "\"></script>", false);
 
                     LocalizeGrapeJS();
 
-                    FrameworkManager.Load(this, "Bootstrap");
+                    WebForms.LinkCSS(Page, "VJ-Bootstrap-CSS", FrameworkManager.Request("Bootstrap", "css/bootstrap.min.css"), false, "DnnPageHeaderProvider", 0);
                     FrameworkManager.Load(this, "FontAwesome");
                 }
                 string NavigateURL = PageManager.GetCurrentTabUrl(PortalSettings);
-                string ClientScript = "var AppMenus=" + JsonConvert.SerializeObject(AppManager.GetAll(AppType.Module)) + "; var m2vPageTabUrl='" + NavigateURL + "'; var CurrentTabUrl ='" + NavigateURL + "'; var IsAdmin=" + PortalSettings.UserInfo.IsInRole("Administrators").ToString().ToLower() + ";var vjProductSKU='" + Core.Components.Product.SKU + "';";
+                string ClientScript = "var AppMenus=" + JsonConvert.SerializeObject(AppManager.GetAll(AppType.Module)) + "; var m2vPageTabUrl='" + NavigateURL + "'; var CurrentTabUrl ='" + NavigateURL + "'; var IsAdmin=" + PortalSettings.UserInfo.IsInRole("Administrators").ToString().ToLower() + ";var vjProductSKU='" + Vanjaro.Common.Components.Product.SKU + "';";
                 WebForms.RegisterClientScriptBlock(Page, "GrapesJsAppsExts", ClientScript, true);
 
                 if (TabPermissionController.HasTabPermission("EDIT") && !Request.QueryString.AllKeys.Contains("mid"))
@@ -147,7 +161,7 @@ namespace Vanjaro.UXManager.Library
             else
                 WebForms.RegisterClientScriptBlock(Page, "MenuSettingsBlocks", "$(document).ready(function(){$('[href=\"#MenuSettings\"]').click();$('#mode-switcher').remove();setTimeout(function(){$('.gjs-cv-canvas__frames').css('pointer-events','none');}, 100); });", true);
 
-
+            VerifyUser();
         }
 
 
@@ -169,7 +183,7 @@ namespace Vanjaro.UXManager.Library
                 MenuMarkUp = MenuManager.RenderMenu(MenuManager.ParseMenuCategoryTree(null), null),
                 NotificationCount = Core.Managers.NotificationManager.RenderNotificationsCount(PortalSettings.PortalId),
                 ToolbarMarkUp = ToolbarManager.RenderMenu(),
-                LanguageMarkUp = LanguageManager.RenderLanguages(),
+                LanguageMarkUp = Core.Entities.Editor.Options.Language == true ? LanguageManager.RenderLanguages() : string.Empty,
                 HasShortcut = (ShortcutManager.GetShortcut().Where(x => x.Shortcut.Visibility).Count() > 0)
             };
             item.ShortcutMarkUp = item.HasShortcut ? ShortcutManager.RenderShortcut() : string.Empty;
@@ -180,8 +194,22 @@ namespace Vanjaro.UXManager.Library
                 item.HasTabEditPermission = TabPermissionController.HasTabPermission("EDIT");
 
             item.EditPage = Core.Entities.Editor.Options.EditPage;
+            item.CustomBlocks = Core.Entities.Editor.Options.CustomBlocks;
+            item.Library = Core.Entities.Editor.Options.Library;
             item.ShowUXManager = string.IsNullOrEmpty(Core.Managers.CookieManager.GetValue("vj_InitUX")) ? false : Convert.ToBoolean(Core.Managers.CookieManager.GetValue("vj_InitUX"));
             return item;
+        }
+
+        private void LocalizeThemeJS()
+        {
+            string FilePath = Server.MapPath("~/Portals/_default/vThemes/" + Core.Managers.ThemeManager.CurrentTheme.Name + "/Localization.js");
+            if (File.Exists(FilePath))
+            {
+                string FileText = File.ReadAllText(FilePath);
+                string SharedResourceFile = Server.MapPath("~/Portals/_default/vThemes/" + Core.Managers.ThemeManager.CurrentTheme.Name + "/App_LocalResources/Shared.resx");
+                FileText = new DNNLocalizationEngine(null, SharedResourceFile, Extension.ShowMissingKeysStatic).Parse(FileText);
+                WebForms.RegisterStartupScript(Page, "LocalizeThemeJS", FileText, true);
+            }
         }
 
         private void LocalizeGrapeJS()
@@ -217,6 +245,57 @@ namespace Vanjaro.UXManager.Library
             else
             {
                 return false;
+            }
+        }
+        private void VerifyUser()
+        {
+            if (!string.IsNullOrEmpty(this.Request.QueryString["verificationcode"]) && this.PortalSettings.UserRegistration == (int)Globals.PortalRegistrationType.VerifiedRegistration)
+            {
+                if (this.Request.IsAuthenticated)
+                {
+                    this.Controls.Clear();
+                }
+
+                var verificationCode = this.Request.QueryString["verificationcode"];
+
+                try
+                {
+                    UserController.VerifyUser(verificationCode.Replace(".", "+").Replace("-", "/").Replace("_", "="));
+
+                    var redirectTabId = this.PortalSettings.Registration.RedirectAfterRegistration;
+
+                    if (this.Request.IsAuthenticated)
+                    {
+                        this.Response.Redirect(ServiceProvider.NavigationManager.NavigateURL(redirectTabId > 0 ? redirectTabId : this.PortalSettings.HomeTabId, string.Empty, "VerificationSuccess=true"), true);
+                    }
+                    else
+                    {
+                        if (redirectTabId > 0)
+                        {
+                            var redirectUrl = ServiceProvider.NavigationManager.NavigateURL(redirectTabId, string.Empty, "VerificationSuccess=true");
+                            redirectUrl = redirectUrl.Replace(Globals.AddHTTP(this.PortalSettings.PortalAlias.HTTPAlias), string.Empty);
+                            this.Response.Cookies.Add(new HttpCookie("returnurl", redirectUrl) { Path = !string.IsNullOrEmpty(Globals.ApplicationPath) ? Globals.ApplicationPath : "/" });
+                        }
+
+                        DotNetNuke.UI.Skins.Skin.AddPageMessage(Page, "", Localization.GetString("VerificationSuccess", this.LocalResourceFile), ModuleMessage.ModuleMessageType.GreenSuccess);
+                    }
+                }
+                catch (UserAlreadyVerifiedException)
+                {
+                    DotNetNuke.UI.Skins.Skin.AddPageMessage(Page, "", Localization.GetString("UserAlreadyVerified", this.LocalResourceFile), ModuleMessage.ModuleMessageType.YellowWarning);
+                }
+                catch (InvalidVerificationCodeException)
+                {
+                    DotNetNuke.UI.Skins.Skin.AddPageMessage(Page, "", Localization.GetString("InvalidVerificationCode", this.LocalResourceFile), ModuleMessage.ModuleMessageType.RedError);
+                }
+                catch (UserDoesNotExistException)
+                {
+                    DotNetNuke.UI.Skins.Skin.AddPageMessage(Page, "", Localization.GetString("UserDoesNotExist", this.LocalResourceFile), ModuleMessage.ModuleMessageType.RedError);
+                }
+                catch (Exception)
+                {
+                    DotNetNuke.UI.Skins.Skin.AddPageMessage(Page, "", Localization.GetString("InvalidVerificationCode", this.LocalResourceFile), ModuleMessage.ModuleMessageType.RedError);
+                }
             }
         }
     }

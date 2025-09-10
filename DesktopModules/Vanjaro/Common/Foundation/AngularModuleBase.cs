@@ -26,7 +26,7 @@ namespace Vanjaro.Common.Foundation
             //Register App JS
             if (!IsPostBack)
             {
-                WebForms.RegisterStartupScriptInclude(Page, App.Name + "-AppJS", Page.ResolveUrl(ScriptHandler + "?appname=" + App.Name.ToLower() + "&portalid=" + PortalId.ToString() + "&moduleid=" + ModuleId.ToString()));
+                WebForms.RegisterStartupScriptInclude(Page, App.Name + "-AppJS", Page.ResolveUrl(ScriptHandler + "?appname=" + App.Name.ToLower() + "&portalid=" + PortalId.ToString() + "&moduleid=" + ModuleId.ToString() + "&culture=" + System.Threading.Thread.CurrentThread.CurrentUICulture.ToString()));
 
 
                 Dictionary<string, object> appProperties = new Dictionary<string, object>
@@ -90,14 +90,6 @@ namespace Vanjaro.Common.Foundation
 
             //Request jQuery & UI Support
             JavaScript.RequestRegistration(CommonJs.jQuery);
-
-            if (Dependencies.Contains(Frameworks.jQueryUI.ToString()))
-            {
-                JavaScript.RequestRegistration(CommonJs.jQueryUI);
-                WebForms.LinkCSS(Page, "JQuery" + "-JQuery-css", FrameworkManager.Request("JQuery", "css", "smoothness.css"));
-            }
-
-            WebForms.RegisterClientScriptInclude(Page, "DNNModal", Page.ResolveUrl("js/dnn.modalpopup.js"));
 
             //Load Angular JS
             FrameworkManager.Load(this, "AngularJS");

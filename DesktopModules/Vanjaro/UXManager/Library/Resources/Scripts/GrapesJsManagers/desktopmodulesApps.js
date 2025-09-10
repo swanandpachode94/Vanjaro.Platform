@@ -85,7 +85,7 @@ global.LoadCustomBlocks = function () {
                         const updateblock = document.createElement("span");
                         updateblock.className = "update-custom-block";
                         if (IsAdmin)
-                            updateblock.innerHTML = "<div class='addpage-blocks dropdown pull-right dropbtn'><a id='dropdownMenuLink' class='dropdownmenu Customblockdropdown' data-toggle='dropdown' aria-haspopup='true' aria-expanded='false'><em class='fas fa-ellipsis-v'></em></a><ul class='dropdown-menu' aria-labelledby='dropdownMenuLink'><li><a class='edit-block' onclick='VjEditor.runCommand(\"edit-custom-block\", { name: \"" + value.Name + "\" ,id: \"" + value.Guid + "\" })'><em class='fas fa-pencil-alt'></em><span>Edit</span></a></li><li><a class='export-block' onclick='VjEditor.runCommand(\"export-custom-block\",{ name: \"" + value.Name + "\" ,id: \"" + value.Guid + "\" })'><em class='fas fa-file-export'></em><span>Export</span></a></li><li><a class='delete-block' onclick='VjEditor.runCommand(\"delete-custom-block\",{ name: \"" + value.Name + "\" ,id: \"" + value.Guid + "\",IsGlobal: \"false\" })'><em class='fas fa-trash-alt'></em><span>Delete</span></a></li></ul></div>";
+                            updateblock.innerHTML = "<div class='addpage-blocks dropdown pull-right dropbtn'><a id='dropdownMenuLink' class='dropdownmenu Customblockdropdown' data-bs-toggle='dropdown' aria-haspopup='true' aria-expanded='false'><em class='fas fa-ellipsis-v'></em></a><ul class='dropdown-menu' aria-labelledby='dropdownMenuLink'><li><a class='edit-block' onclick='VjEditor.runCommand(\"edit-custom-block\", { name: \"" + value.Name + "\" ,id: \"" + value.Guid + "\" })'><em class='fas fa-pencil-alt'></em><span>Edit</span></a></li><li><a class='export-block' onclick='VjEditor.runCommand(\"export-custom-block\",{ name: \"" + value.Name + "\" ,id: \"" + value.Guid + "\" })'><em class='fas fa-file-export'></em><span>Export</span></a></li><li><a class='delete-block' onclick='VjEditor.runCommand(\"delete-custom-block\",{ name: \"" + value.Name + "\" ,id: \"" + value.Guid + "\",IsGlobal: \"false\" })'><em class='fas fa-trash-alt'></em><span>Delete</span></a></li></ul></div>";
                         el.appendChild(updateblock);
                     }
                 });
@@ -115,7 +115,7 @@ global.LoadCustomBlocks = function () {
                         const updateblock = document.createElement("span");
                         updateblock.className = "update-custom-block";
                         if (IsAdmin)
-                            updateblock.innerHTML = "<div class='addpage-blocks dropdown pull-right dropbtn'><a id='dropdownMenuLink' class='dropdownmenu Customblockdropdown' data-toggle='dropdown' aria-haspopup='true'  aria-expanded='false'><em class='fas fa-ellipsis-v'></em></a><ul class='dropdown-menu' aria-labelledby='dropdownMenuLink'><li><a class='edit-block' onclick='VjEditor.runCommand(\"edit-custom-block\", { name: \"" + value.Name + "\" ,id: \"" + value.Guid + "\" })'><em class='fas fa-pencil-alt'></em><span>Edit</span></a></li><li><a class='delete-block' onclick='VjEditor.runCommand(\"delete-custom-block\",{ name: \"" + value.Name + "\" ,id: \"" + value.Guid + "\",IsGlobal: \"true\" })'><em class='fas fa-trash-alt'></em><span>Delete</span></a></li></ul></div>";
+                            updateblock.innerHTML = "<div class='addpage-blocks dropdown pull-right dropbtn'><a id='dropdownMenuLink' class='dropdownmenu Customblockdropdown' data-bs-toggle='dropdown' aria-haspopup='true'  aria-expanded='false'><em class='fas fa-ellipsis-v'></em></a><ul class='dropdown-menu' aria-labelledby='dropdownMenuLink'><li><a class='edit-block' onclick='VjEditor.runCommand(\"edit-custom-block\", { name: \"" + value.Name + "\" ,id: \"" + value.Guid + "\" })'><em class='fas fa-pencil-alt'></em><span>Edit</span></a></li><li><a class='delete-block' onclick='VjEditor.runCommand(\"delete-custom-block\",{ name: \"" + value.Name + "\" ,id: \"" + value.Guid + "\",IsGlobal: \"true\" })'><em class='fas fa-trash-alt'></em><span>Delete</span></a></li></ul></div>";
                         el.appendChild(updateblock);
                     }
                 });
@@ -390,6 +390,8 @@ global.BuildAppComponent = function (vjcomps) {
                         v.components[0].content = "<div class='alert alert-info' role='alert'>" + v.attributes.fname + " will appear here when this page is previewed or published.</div>";
                     else
                         v.components[0].content = $('#dnn_vj_' + v.attributes.mid)[0].outerHTML;
+                    if (v.name == undefined)
+                        v.name = "App: " + v.attributes.fname;
                 }
                 else {
                     v.include = false;
@@ -493,6 +495,29 @@ global.BuildBlockComponent = function (vjcomps) {
                     }
                     else
                         v.components[0].content = $this.outerHTML;
+                    var existingcomp = v.components[0];
+                    v.components = [];
+                    v.components.push(existingcomp);
+                    v.content = '';
+                }
+            }
+            else if (v.content != undefined && v.content.length > 0) {
+                if (v.components == undefined || v.components[0] == undefined) {
+                    var component = { components: [], content: '' };
+                    v.components = [];
+                    v.components.push(component);
+                }
+                if (v.components != undefined && v.components[0] != undefined) {
+                    v.components[0].components = [];
+                    if (v.attributes["data-block-type"] == "Logo") {
+                        var style = $(v.components[0].content).find('img').attr('style');
+                        v.components[0].content = $(v.content)[0].innerHTML;
+                        var contentdom = $(v.components[0].content);
+                        $(contentdom).find('img').attr('style', style);
+                        v.components[0].content = contentdom[0].outerHTML;
+                    }
+                    else
+                        v.components[0].content = v.content;
                     var existingcomp = v.components[0];
                     v.components = [];
                     v.components.push(existingcomp);
@@ -664,4 +689,36 @@ global.CleanGjAttrs = function (html) {
         result = compHtml.outerHTML;
     }
     return result;
-}
+};
+
+global.CleanCssrules = function () {
+    try {
+        var ItemsToRemove = [];
+        var DistinctSelectors = [];
+        var AllCssRules = [];
+        $.each(VjEditor.CssComposer.getAll().models, function (i, v) {
+            AllCssRules.push(v);
+        });
+        $.each(AllCssRules.reverse(), function (ci, cv) {
+            if (cv != undefined && cv.attributes != undefined) {
+                var key = cv.attributes.mediaText + '|' + cv.attributes.state + '|';
+                if (cv.attributes.selectors != undefined && cv.attributes.selectors.models != undefined) {
+                    $.each(cv.attributes.selectors.models, function (i, v) {
+                        if (v != undefined && v.attributes != undefined && v.attributes.name != undefined)
+                            key += v.attributes.name;
+                    });
+                }
+                if (DistinctSelectors.indexOf(key) >= 0)
+                    ItemsToRemove.push(cv);
+                else
+                    DistinctSelectors.push(key);
+            }
+        });
+        if (ItemsToRemove.length > 0) {
+            $.each(ItemsToRemove, function (i, v) {
+                VjEditor.CssComposer.getAll().remove(v);
+            });
+        }
+    }
+    catch (e) { console.log(e); }
+};

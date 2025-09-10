@@ -40,7 +40,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>..\..\..\..\..\..\bin\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;RELEASE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -59,9 +59,13 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources.txt" />
+    <Content Include="Resources\Help\Videos.html" />
     <Content Include="Resources\Images\Logo.png" />
+    <Content Include="Resources\Scripts\app.js" />
     <Content Include="Resources\Stylesheets\app.css" />
     <Content Include="Resources\UIEngine\AngularBootstrap\Layouts\Help.htm" />
+    <Content Include="Views\Setting\Videos.html" />
+    <Content Include="Views\Setting\Videos.js" />
     <Content Include="Views\Setting\Help.html" />
     <Content Include="Views\Setting\Help.js" />
   </ItemGroup>
@@ -69,8 +73,7 @@
     <Content Include="Views\App_LocalResources\Shared.resx" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Views\Setting\App_LocalResources\Add.resx" />
-    <Content Include="Views\Setting\App_LocalResources\Roles.resx" />
+    <Content Include="Views\Setting\App_LocalResources\Videos.resx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="DotNetNuke, Version=9.3.2.0, Culture=neutral, processorArchitecture=MSIL">
@@ -100,13 +103,14 @@
       <Project>{82603eb3-cfec-4101-837a-7581d3300540}</Project>
       <Name>Vanjaro.Common</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\..\Core\Library\Vanjaro.Core.csproj">
+      <Project>{3ED0D4A5-E2DA-4DD9-AB64-9E0A2B6B4305}</Project>
+      <Name>Vanjaro.Core</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\..\Library\Vanjaro.UX.csproj">
       <Project>{203151e8-6239-447c-8bf3-41f864a35b23}</Project>
       <Name>Vanjaro.UX</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Views\Setting\App_LocalResources\AddGroup.resx" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="web.config" />
@@ -116,6 +120,9 @@
     <None Include="web.Release.config">
       <DependentUpon>web.config</DependentUpon>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Views\Setting\App_LocalResources\Help.resx" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

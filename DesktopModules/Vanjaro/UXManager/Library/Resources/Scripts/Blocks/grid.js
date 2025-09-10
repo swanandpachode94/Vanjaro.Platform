@@ -6,10 +6,10 @@ export default (editor, config = {}) => {
 	const stylePrefix = config.stylePrefix;
 	const labelCell = config.labelColumn;
 	const clsRow = `${stylePrefix}row`;
-	const clsCell = `${stylePrefix}col-lg-6`;
+	const clsCell = `${stylePrefix}col-xl-6`;
 
 	const colAttr = {
-		class: clsCell + ' col-sm-6 col-12',
+		class: clsCell + ' col-md-6 col-sm-6 col-12',
 		'data-gjs-custom-name': labelCell,
 	};
 
@@ -49,7 +49,7 @@ export default (editor, config = {}) => {
 	cmd.add('add-column', ed => {
 		var Selected = VjEditor.getSelected();
 		var Row = '<div class="row"></div>';
-		var Column = '<div class="col-lg-1 col-sm-1 col-12"></div>';
+		var Column = '<div class="col-xl-1 col-md-1 col-sm-1 col-12"></div>';
 		if (Selected.attributes.type == 'grid') {
 			if (typeof Selected.components().models[0] != 'undefined')
 				Selected.components().models[0].components().add(Column);
@@ -64,7 +64,6 @@ export default (editor, config = {}) => {
 
 	let dc = editor.DomComponents;
 	const defaultType = dc.getType('default');
-	const defaultModel = defaultType.model;
 	const defaultView = defaultType.view;
 	global.arrway = [];
 
@@ -89,14 +88,16 @@ export default (editor, config = {}) => {
 
 	global.setColSize = function (colSize) {
 
-		var colClass = 'col-lg-';
+		var colClass = 'col-xl-';
 		var Device = VjEditor.getDevice();
 		var browserwidth = window.innerWidth - 325;
 
 		if (Device == 'Mobile Portrait' || browserwidth <= '360')
-			colClass = 'col-';
-		else if (Device == 'Tablet' || browserwidth <= '991' || Device == 'Mobile Landscape')
-			colClass = 'col-sm-';
+            colClass = 'col-';
+        else if (Device == 'Mobile Landscape' || browserwidth <= '767')
+            colClass = 'col-sm-';
+		else if (Device == 'Tablet' || browserwidth <= '991')
+			colClass = 'col-md-';
 
 		var re = new RegExp('(' + colClass + '(\\d+))', 'i');
 		var SelectedCol = VjEditor.getSelected();
@@ -113,40 +114,68 @@ export default (editor, config = {}) => {
 	};
 
 	dc.addType('row', {
-		model: defaultModel.extend({
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+        model: {
+            initToolbar() {
+                var model = this;
+                if (!model.get('toolbar')) {
+                    var tb = [];
+
+                    tb.push({
+                        attributes: { class: 'fa fa-arrow-up' },
+                        command: function (t) {
+                            return t.runCommand("core:component-exit", {
+                                force: 1
+                            })
+                        }
+                    });
+
+                    if (model.get('draggable')) {
+                        tb.push({
+                            attributes: { class: 'fa fa-arrows' },
+                            command: 'tlb-move',
+                        });
+                    }
+
+                    if (model.get('copyable')) {
+                        tb.push({
+                            attributes: { class: 'fa fa-clone' },
+                            command: 'vj-copy',
+                        });
+                    }
+
+                    if (model.get('removable')) {
+                        tb.push({
+                            attributes: { class: 'fa fa-trash-o' },
+                            command: 'vj-delete',
+                        });
+                    }
+
+                    model.set('toolbar', tb);
+                }
+            },
+			defaults: {
 				'custom-name': 'Row',
 				tagName: 'div',
 				draggable: true,
 				droppable: '[data-gjs-type=column]',
 				layerable: true,
-				selectable: false,
+				selectable: true,
 				hoverable: false,
-				highlightable: false,
-			})
-		}, {
+                highlightable: false,
+                traits: []
+			}
+		},
 			isComponent(el) {
 				if (el && el.tagName && el.tagName.toLowerCase() == 'div' && el.classList && el.classList.contains('row')) {
 					return { type: 'row' };
 				}
-			}
-		}),
-		view: defaultView.extend({
-			onRender() {
+		},
 
-				var model = this.model;
-
-				if (typeof model.parent() != 'undefined' && model.parent().attributes.type != "grid") {
-					setTimeout(function () {
-						model.replaceWith('<div class="container">' + model.getEl().outerHTML + '</div>');
-					});
-				}
-			},
-		})
+		view: defaultView
 	});
 
 	dc.addType('column', {
-		model: defaultModel.extend({
+		model: {
 			initToolbar() {
 				var model = this;
 				if (!model.get('toolbar')) {
@@ -176,7 +205,7 @@ export default (editor, config = {}) => {
 					if (model.get('copyable')) {
 						tb.push({
 							attributes: { class: 'fa fa-clone' },
-							command: 'tlb-clone',
+							command: 'vj-copy',
 						});
 					}
 
@@ -190,7 +219,7 @@ export default (editor, config = {}) => {
 					model.set('toolbar', tb);
 				}
 			},
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+			defaults: {
 				//unstylable: ['width'],
 				draggable: '.row',
 				selectable: true,
@@ -276,7 +305,7 @@ export default (editor, config = {}) => {
 						changeProp: 1,
 					},
 				]
-			}),
+			},
 			init() {
 				this.listenTo(this, 'change:data-pane', this.ChangeControl);
 			},
@@ -287,7 +316,7 @@ export default (editor, config = {}) => {
 				if (!this.components().length)
 					$(this.getEl()).attr("data-empty", "true");
 			}
-		}, {
+		},
 			isComponent(el) {
 				let match = false;
 				if (el && el.tagName && el.tagName.toLowerCase() == 'div') {
@@ -299,17 +328,17 @@ export default (editor, config = {}) => {
 				}
 				if (match) return { type: 'column' };
 			}
-		}),
-		view: defaultView.extend({
+		,
+		view: {
 			onRender() {
 				if (!this.model.components().length)
 					$(this.el).attr("data-empty", "true");
 			}
-		})
+		}
 	});
 
 	dc.addType('grid', {
-		model: defaultModel.extend({
+		model: {
 			initToolbar() {
 				var model = this;
 				if (!model.get('toolbar')) {
@@ -372,7 +401,7 @@ export default (editor, config = {}) => {
 					model.set('toolbar', tb);
 				}
 			},
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+			defaults: {
 				'custom-name': 'Grid',
 				tagName: 'div',
 				copyable: true,
@@ -393,7 +422,7 @@ export default (editor, config = {}) => {
 					name: 'horizontalalignment',
 					type: 'toggle_radio',
 					UpdateStyles: true,
-					selector: 'row',
+					selector: '[data-gjs-type="row"]',
 					cssproperties: [{ name: "justify-content" }],
 					options: [
 						{ id: 'flex-start', name: 'flex-start', image: 'align-left' },
@@ -406,15 +435,15 @@ export default (editor, config = {}) => {
 					changeProp: 1,
 				},
 				]
-			})
-		}, {
-			isComponent(el) {
-				if (el && el.tagName && el.tagName.toLowerCase() == 'div' && el.classList && (el.classList.contains('container') || el.classList.contains('container-fluid')) && (el.firstElementChild != null && el.firstElementChild.classList.contains('row'))) {
-					return { type: 'grid' };
-				}
 			}
-		}),
-		view: defaultView.extend({
+		},
+		isComponent(el) {
+			if (el && el.tagName && el.tagName.toLowerCase() == 'div' && el.classList && (el.classList.contains('container') || el.classList.contains('container-fluid')) && (el.firstElementChild != null && el.firstElementChild.classList.contains('row'))) {
+				return { type: 'grid' };
+			}
+		}
+		,
+		view: {
 			init() {
 				this.listenTo(this.model, 'active', this.ShowGrid);
 			},
@@ -455,22 +484,22 @@ export default (editor, config = {}) => {
 	<div class="container-fluid pt-3 pb-3">
 		<div class="row text-center">
 			<div class="col-sm-2">
-				<a onclick="SingleClick([{'size': '3'}, {'size': '9'}])" ondblclick="DoubleClick([{'size': '3'}, {'size': '9'}])"><img class="img-responsive" src="`+ VjDefaultPath + `col-3.9.png">
+				<a onclick="SingleClick([{'size': '3'}, {'size': '9'}])" ondblclick="DoubleClick([{'size': '3'}, {'size': '9'}])"><img class="img-responsive" src="`+ VjDefaultPath + `col-4.8.png">
+				    <h5>25% + 75%</h5>
+                </a>
+			</div>
+            <div class="col-sm-2">
+				<a onclick="SingleClick([{'size': '4'}, {'size': '8'}])" ondblclick="DoubleClick([{'size': '4'}, {'size': '8'}])"><img class="img-responsive" src="`+ VjDefaultPath + `col-3.9.png">
 				    <h5>33% + 67%</h5>
                 </a>    
 			</div>
 			<div class="col-sm-2">
-				<a onclick="SingleClick([{'size': '4'}, {'size': '8'}])" ondblclick="DoubleClick([{'size': '4'}, {'size': '8'}])"><img class="img-responsive" src="`+ VjDefaultPath + `col-4.8.png">
-				    <h5>25% + 75%</h5>
-                </a>
-			</div>
-			<div class="col-sm-2">
-				<a onclick="SingleClick([{'size': '9'}, {'size': '3'}])" ondblclick="DoubleClick([{'size': '9'}, {'size': '3'}])"><img class="img-responsive" src="`+ VjDefaultPath + `col-9.3.png">
+				<a onclick="SingleClick([{'size': '8'}, {'size': '4'}])" ondblclick="DoubleClick([{'size': '8'}, {'size': '4'}])"><img class="img-responsive" src="`+ VjDefaultPath + `col-9.3.png">
 				    <h5>67% + 33%</h5>
                 </a>
 			</div>
 			<div class="col-sm-2">
-				<a onclick="SingleClick([{'size': '8'}, {'size': '4'}])" ondblclick="DoubleClick([{'size': '8'}, {'size': '4'}])"><img class="img-responsive" src="`+ VjDefaultPath + `col-8.4.png">
+				<a onclick="SingleClick([{'size': '9'}, {'size': '3'}])" ondblclick="DoubleClick([{'size': '9'}, {'size': '3'}])"><img class="img-responsive" src="`+ VjDefaultPath + `col-8.4.png">
 				    <h5>75% + 25%</h5>
                 </a>
 			</div>
@@ -491,7 +520,7 @@ export default (editor, config = {}) => {
 				if (!$modalbody.find('.select-layout').length)
 					$modalbody.append($html);
 			},
-		})
+		}
 	});
 }
 
@@ -504,7 +533,7 @@ global.ChangeGridColumns = function (cols) {
 	var content = `<div class="row">`;
 	var i;
 	for (i = 0; i < cols.length; i++) {
-		content += `<div class="col-lg-` + cols[i].size + ` col-sm-` + cols[i].size + ` col-12"></div>`;
+		content += `<div class="col-xl-` + cols[i].size + ` col-md-` + cols[i].size + ` col-sm-` + cols[i].size + ` col-12"></div>`;
 	}
 	content += `</div>`;
 	compSelected.components(content);

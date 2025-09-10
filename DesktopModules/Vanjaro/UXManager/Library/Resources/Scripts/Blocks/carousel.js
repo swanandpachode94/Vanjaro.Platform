@@ -12,19 +12,18 @@
 		category: VjLocalized.Basic,
 		content: {
 			classes: ['carousel', 'vj-carousel', 'slide'],
-            attributes: { 'data-bs-ride': 'carousel', 'data-bs-interval': '5000' },
+			attributes: { 'data-bs-ride': 'carousel', 'data-bs-interval': '5000' },
 			type: 'carousel'
 		}
 	});
 
 	let dc = editor.DomComponents;
 	const defaultType = dc.getType('default');
-	const defaultModel = defaultType.model;
 	const defaultView = defaultType.view;
 
 	dc.addType('carousel', {
 
-		model: defaultModel.extend({
+		model: {
 			initToolbar() {
 				var model = this;
 				if (!model.get('toolbar')) {
@@ -86,7 +85,7 @@
 					model.set('toolbar', tb);
 				}
 			},
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+			defaults: {
 				name: 'Carousel',
 				traits: [
 					{
@@ -94,24 +93,24 @@
 						label: 'Controls',
 						name: 'controls',
 						options: [
-							{ id: 'controlstrue', name: 'Yes' },
-							{ id: 'controlsfalse', name: 'No' },
+							{ id: 'controlstrue', name: 'Yes', class: '' },
+							{ id: 'controlsfalse', name: 'No', class: '' },
 						],
 						default: 'controlstrue',
 						changeProp: 1,
-						UpdateStyles: true,
+						SwitchClass: true,
 					},
 					{
 						type: 'toggle_radio',
 						label: 'Indicators',
 						name: 'indicators',
 						options: [
-							{ id: 'indicatorstrue', name: 'Yes' },
-							{ id: 'indicatorsfalse', name: 'No' },
+							{ id: 'indicatorstrue', name: 'Yes', class: '' },
+							{ id: 'indicatorsfalse', name: 'No', class: '' },
 						],
 						default: 'indicatorstrue',
 						changeProp: 1,
-						UpdateStyles: true,
+						SwitchClass: true,
 					},
 					{
 						type: 'toggle_radio',
@@ -129,10 +128,10 @@
 						type: 'toggle_radio',
 						label: 'Rotate Automatically',
 						name: 'automatically',
-						UpdateStyles: true,
+						SwitchClass: true,
 						options: [
-							{ id: 'automaticallytrue', name: 'Yes' },
-							{ id: 'automaticallyfalse', name: 'No' },
+							{ id: 'automaticallytrue', name: 'Yes', class: '' },
+							{ id: 'automaticallyfalse', name: 'No', class: '' },
 						],
 						default: 'automaticallytrue',
 						changeProp: 1,
@@ -145,7 +144,7 @@
 						changeProp: 1,
 					},
 				],
-			}),
+			},
 			init() {
 				this.listenTo(this, 'change:controls', this.ChangeControl);
 				this.listenTo(this, 'change:indicators', this.ChangeIndicators);
@@ -198,15 +197,19 @@
 				}
 			},
 			AddControl() {
+
 				var modelId = this.getId();
-				this.components().add(`<a class="carousel-control carousel-control-prev" href="#` + modelId + `" role="button" data-bs-slide="prev">
-    <span data-gjs-selectable="false" class="carousel-control carousel-control-prev-icon" aria-hidden="true"></span>
-    <span class="carousel-control visually-hidden">Previous</span>
-  </a>
-  <a class="carousel-control carousel-control-next" href="#`+ modelId + `" role="button" data-bs-slide="next">
-    <span data-gjs-selectable="false" class="carousel-control carousel-control-next-icon" aria-hidden="true"></span>
-    <span class="carousel-control visually-hidden">Next</span>
-  </a>`);
+
+				this.components().add(
+					`<button type="button" class="carousel-control carousel-control-prev" data-bs-target="#` + modelId + `" data-bs-slide="prev">
+						<span data-gjs-selectable="false" class="carousel-control carousel-control-prev-icon" aria-hidden="true"></span>
+						<span class="carousel-control visually-hidden">Previous</span>
+					</button>
+					<button type="button" class="carousel-control carousel-control-next" data-bs-target="#`+ modelId + `" data-bs-slide="next">
+						<span data-gjs-selectable="false" class="carousel-control carousel-control-next-icon" aria-hidden="true"></span>
+						<span class="carousel-control visually-hidden">Next</span>
+					</button>`
+				);
 			},
 			AddIndicators() {
 
@@ -218,14 +221,14 @@
 
 				$.each(slides, function (k, v) {
 
-                    markup += '<li data-bs-target="#' + modelId + '" data-bs-slide-to="' + k + '" class="carousel-indicator';
+					markup += '<li data-bs-target="#' + modelId + '" data-bs-slide-to="' + k + '" class="carousel-indicator';
 
-                    var index = $(this.closest('[data-gjs-type="carousel-inner"]').getEl()).find('.carousel-item.active').index();
+					var index = $(this.closest('[data-gjs-type="carousel-inner"]').getEl()).find('.carousel-item.active').index();
 
-                    if (k == index)
-                        markup += ' active"';
-                    else
-                        markup += '"';
+					if (k == index)
+						markup += ' active"';
+					else
+						markup += '"';
 
 					markup += '></li>';
 				});
@@ -233,90 +236,92 @@
 				markup += '</ol>';
 				comps.add(markup);
 			},
-		}, {
+		},
 			isComponent(el) {
 				if (el && el.classList && el.classList.contains('carousel')) {
 					return { type: 'carousel' };
 				}
 			},
-		}),
-		view: defaultView.extend({
+		
+		view: {
 			init() {
-
+	
 				const comps = this.model.components();
 
 				if (!comps.length) {
 
 					var modelId = this.model.getId();
+					this.model.setId(modelId);
 
 					comps.add(`
 						<ol class="carousel-indicators">
                             <li data-bs-target="#`+ modelId + `" data-bs-slide-to="0" class="carousel-indicator active"></li>
                             <li data-bs-target="#`+ modelId + `" data-bs-slide-to="1" class="carousel-indicator"></li>
-                            <li data-bs-target="#`+ modelId + `" data-bs-slide-to="2" class="carousel-indicator"></li>
+                             <li data-bs-target="#`+ modelId + `" data-bs-slide-to="2" class="carousel-indicator"></li>
                         </ol>
                         <div class="carousel-inner">
                             <div class="carousel-item active">
-                                <a class="carousel-link">
+                                <span class="carousel-link">
                                     <picture class="picture-box">
-                                        <img class="vj-slide-image" src="`+ VjDefaultPath + `image.png" />
+                                        <img loading="lazy" class="vj-slide-image img-fluid" src="`+ VjDefaultPath + `image.png" />
                                     </picture>
-                                </a>
+                                </span>
                             </div>
                             <div class="carousel-item">
-                                <a class="carousel-link">
+                                <span class="carousel-link">
                                     <picture class="picture-box">
-                                        <img class="vj-slide-image" src="`+ VjDefaultPath + `image.png" />
+                                        <img loading="lazy" class="vj-slide-image img-fluid" src="`+ VjDefaultPath + `image.png" />
                                     </picture>
-                                </a>
+                                </span>
                             </div>
                             <div class="carousel-item">
-                                <a class="carousel-link">
+                                <span class="carousel-link">
                                     <picture class="picture-box">
-                                        <img class="vj-slide-image" src="`+ VjDefaultPath + `image.png" />
+                                        <img loading="lazy" class="vj-slide-image img-fluid" src="`+ VjDefaultPath + `image.png" />
                                     </picture>
-                                </a>
+                                </span>
                             </div>
                         </div>
-                        <a class="carousel-control carousel-control-prev" href="#`+ modelId + `" role="button" data-bs-slide="prev">
+                        <button type="button" class="carousel-control carousel-control-prev" data-bs-target="#`+ modelId + `" data-bs-slide="prev">
                             <span data-gjs-selectable="false" class="carousel-control carousel-control-prev-icon" aria-hidden="true"></span>
                             <span class="carousel-control visually-hidden">Previous</span>
-                        </a>
-                        <a class="carousel-control carousel-control-next" href="#`+ modelId + `" role="button" data-bs-slide="next">
+                        </button>
+                        <button type="button" class="carousel-control carousel-control-next" data-bs-target="#`+ modelId + `" data-bs-slide="next">
                             <span data-gjs-selectable="false" class="carousel-control carousel-control-next-icon" aria-hidden="true"></span>
                             <span class="carousel-control visually-hidden">Next</span>
-                        </a>
+                        </button>
 					`);
 				}
 			},
-		}),
+			onRender() {
+				//$(this.el).attr('data-bs-interval', false);
+			}
+		},
 	});
 
 	dc.addType('carousel-inner', {
 
-		model: defaultModel.extend({
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+		model: {
+			defaults: {
 				name: 'Carousel Inner',
 				draggable: false,
 				droppable: '[data-gjs-type=carousel-item]',
 				selectable: false,
 				hoverable: false,
 				highlightable: false,
-			}),
-		}, {
+			},
+		},
 			isComponent(el) {
 				if (el && el.classList && el.classList.contains('carousel-inner')) return { type: 'carousel-inner' };
-			},
-		}),
-
+		},
 		view: defaultView
 	});
 
 	dc.addType('carousel-item', {
 
-		model: defaultModel.extend({
+		model: {
 
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+			defaults: {
 				name: 'Carousel Item',
 				removable: false,
 				draggable: ".carousel-inner",
@@ -326,27 +331,22 @@
 				highlightable: false,
 				copyable: false,
 				resizable: false,
-				selectable: true,
+				selectable: false,
 				editable: false,
 				hoverable: false,
 				traits: []
-			}),
-		}, {
+			},
+		},
 			isComponent(el) {
 				if (el && el.classList && el.classList.contains('carousel-item')) return { type: 'carousel-item' };
 			},
-		}),
 
 		view: defaultView
 	});
 
-	const linkType = dc.getType('link');
-	const linkModel = linkType.model;
-	const linkView = linkType.view;
-
 	dc.addType('carousel-link', {
-		model: linkModel.extend({
-			defaults: Object.assign({}, linkModel.prototype.defaults, {
+		model: {
+			defaults: {
 				name: 'Carousel Link',
 				removable: false,
 				draggable: false,
@@ -359,16 +359,15 @@
 				selectable: false,
 				editable: false,
 				hoverable: false,
-			}),
+			},
 		},
-			{
 				isComponent(el) {
 					if (el && el.classList && el.classList.contains('carousel-link')) {
 						return { type: 'carousel-link' };
 					}
 				}
-			}),
-		view: linkView
+			,
+		view: defaultView
 	});
 
 	const imageType = dc.getType('image');
@@ -376,8 +375,7 @@
 	const imageView = imageType.view;
 
 	dc.addType('carousel-image', {
-
-		model: imageModel.extend({
+		model: {
 			initToolbar() {
 				var model = this;
 				if (!model.get('toolbar')) {
@@ -414,13 +412,20 @@
 					model.set('toolbar', tb);
 				}
 			},
-			defaults: Object.assign({}, imageModel.prototype.defaults, {
+			defaults:  {
 				'custom-name': 'Carousel Image',
 				draggable: false,
 				droppable: false,
 				resizable: false,
+				optimize: true,
+				editor: true,
+				source: true,
 				tagName: 'img',
 				traits: [{
+					type: 'text',
+					name: 'alt',
+					label: 'Alt',
+				}, {
 					type: 'text',
 					name: 'slidetitle',
 					label: 'Title',
@@ -437,7 +442,7 @@
 					href: "",
 					"data_href_type": "url",
 				}]
-			}),
+			},
 			init() {
 				this.listenTo(this, 'change:slidetitle', this.ChangeTitle);
 				this.listenTo(this, 'change:caption', this.ChangeCaption);
@@ -445,6 +450,7 @@
 			},
 			ChangeTitle() {
 
+				var title = this.attributes.slidetitle;
 				var slide = this.closest('[data-gjs-type="carousel-item"]');
 				var carouselCaption = slide.components().models.find(m => m.attributes.type == 'carousel-caption');
 
@@ -456,11 +462,16 @@
 				if (carouselCaption.components().length && typeof carouselCaption.components().models.find(t => t.attributes.type == 'carousel-heading') != 'undefined')
 					carouselCaption.components().models.find(t => t.attributes.type == 'carousel-heading').remove();
 
-				carouselCaption.append('<h5 class="carousel-heading">' + this.attributes.slidetitle + '</h5>', { at: 0 });
+				if (title != "")
+					carouselCaption.append('<h5 class="carousel-heading">' + title + '</h5>', { at: 0 });
+
+				if (carouselCaption.components().length == 0)
+					carouselCaption.remove();
 
 			},
 			ChangeCaption() {
 
+				var caption = this.attributes.caption;
 				var slide = this.closest('[data-gjs-type="carousel-item"]');
 				var carouselCaption = slide.components().models.find(m => m.attributes.type == 'carousel-caption');
 
@@ -471,8 +482,12 @@
 
 				if (carouselCaption.components().length && typeof carouselCaption.components().models.find(t => t.attributes.type == 'carousel-text') != 'undefined')
 					carouselCaption.components().models.find(t => t.attributes.type == 'carousel-text').remove();
-	
-				carouselCaption.append('<p class="carousel-text">' + this.attributes.caption + '</p>');
+
+				if (caption != "")
+					carouselCaption.append('<p class="carousel-text">' + caption + '</p>');
+
+				if (carouselCaption.components().length == 0)
+					carouselCaption.remove();
 
 			},
 			ChangeTarget() {
@@ -482,14 +497,13 @@
 					this.parent().parent().addAttributes({ target: '_self' });
 			}
 		},
-			{
-				isComponent(el) {
-					if (el && el.classList && el.classList.contains('vj-slide-image')) {
-						return { type: 'carousel-image' };
-					}
-				}
-			}),
-		view: imageView.extend({
+		isComponent(el) {
+			if (el && el.classList && el.classList.contains('vj-slide-image')) {
+				return { type: 'carousel-image' };
+			}
+		}
+		,
+		view: {
 			events: {
 				dblclick: function () {
 					this.ShowModal()
@@ -497,6 +511,7 @@
 			},
 			init() {
 				this.listenTo(this.model.parent(), 'active', this.ActivateModal); // listen for active event
+				this.model.set('src', this.model.getAttributes().src);
 			},
 			ActivateModal() {
 				var Selected = this.model.collection.first();
@@ -512,12 +527,12 @@
 				var url = CurrentExtTabUrl + "&guid=a7a5e632-a73a-4792-8049-bc15a9435505#!/setting";
 				OpenPopUp(null, 900, 'right', 'Image', url, '', true);
 			},
-		}),
+		},
 	});
 
 	dc.addType('carousel-caption', {
-		model: defaultModel.extend({
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+		model: {
+			defaults: {
 				name: 'Caption',
 				removable: false,
 				draggable: false,
@@ -532,20 +547,18 @@
 				editable: false,
 				hoverable: false,
 				propagate: ['removable', 'draggable', 'droppable', 'badgable', 'stylable', 'highlightable', 'copyable', 'resizable', 'editable', 'layerable', 'hoverable'],
-			}),
-		}, {
+			},
+		},
 			isComponent(el) {
 				if (el && el.classList && el.classList.contains('carousel-caption')) return { type: 'carousel-caption' };
-			},
-		}),
-
+			}
+		,
 		view: defaultType.view
 	});
 
-
 	dc.addType('carousel-heading', {
-		model: defaultModel.extend({
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+		model: {
+			defaults: {
 				name: 'Title',
 				removable: false,
 				draggable: false,
@@ -559,19 +572,18 @@
 				selectable: false,
 				editable: false,
 				hoverable: false,
-			}),
-		}, {
+			},
+		},
 			isComponent(el) {
 				if (el && el.classList && el.classList.contains('carousel-heading')) return { type: 'carousel-heading' };
 			},
-		}),
 
 		view: defaultType.view
 	});
 
 	dc.addType('carousel-text', {
-		model: defaultModel.extend({
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+		model: {
+			defaults: {
 				name: 'Caption',
 				removable: false,
 				draggable: false,
@@ -585,20 +597,19 @@
 				selectable: false,
 				editable: false,
 				hoverable: false,
-			}),
-		}, {
+			},
+		},
 			isComponent(el) {
 				if (el && el.classList && el.classList.contains('carousel-text')) return { type: 'carousel-text' };
 			},
-		}),
 
 		view: defaultType.view
 	});
 
 	dc.addType('next', {
 
-		model: defaultModel.extend({
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+		model: {
+			defaults: {
 				name: 'Nav Next',
 				removable: false,
 				draggable: false,
@@ -613,20 +624,19 @@
 				editable: false,
 				hoverable: false,
 				propagate: ['removable', 'draggable', 'droppable', 'badgable', 'stylable', 'highlightable', 'copyable', 'resizable', 'editable', 'layerable', 'selectable', 'hoverable'],
-			}),
-		}, {
+			},
+		},
 			isComponent(el) {
 				if (el && el.classList && el.classList.contains('carousel-control-next')) return { type: 'next' };
 			},
-		}),
 
 		view: defaultType.view
 	});
 
 	dc.addType('prev', {
 
-		model: defaultModel.extend({
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+		model: {
+			defaults: {
 				name: 'Nav Prev',
 				removable: false,
 				draggable: false,
@@ -641,20 +651,19 @@
 				editable: false,
 				hoverable: false,
 				propagate: ['removable', 'draggable', 'droppable', 'badgable', 'stylable', 'highlightable', 'copyable', 'resizable', 'editable', 'layerable', 'selectable', 'hoverable'],
-			}),
-		}, {
+			},
+		},
 			isComponent(el) {
 				if (el && el.classList && el.classList.contains('carousel-control-prev')) return { type: 'prev' };
 			},
-		}),
 
 		view: defaultType.view
 	});
 
 	dc.addType('indicators', {
 
-		model: defaultModel.extend({
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+		model: {
+			defaults: {
 				name: 'Indicators',
 				removable: false,
 				draggable: false,
@@ -668,20 +677,19 @@
 				selectable: false,
 				editable: false,
 				hoverable: false,
-			}),
-		}, {
+			},
+		},
 			isComponent(el) {
 				if (el && el.classList && el.classList.contains('carousel-indicators')) return { type: 'indicators' };
-			},
-		}),
+		},
 
 		view: defaultType.view
 	});
 
 	dc.addType('indicator', {
 
-		model: defaultModel.extend({
-			defaults: Object.assign({}, defaultModel.prototype.defaults, {
+		model: {
+			defaults: {
 				name: 'Indicator',
 				removable: false,
 				draggable: false,
@@ -695,12 +703,11 @@
 				selectable: true,
 				editable: false,
 				hoverable: false,
-			}),
-		}, {
+			},
+		},
 			isComponent(el) {
 				if (el && el.classList && el.classList.contains('carousel-indicator')) return { type: 'indicator' };
 			},
-		}),
 
 		view: defaultType.view
 	});
@@ -716,20 +723,20 @@
 
 			slideInner.components().add(`
             <div class="carousel-item">
-                <a class="carousel-link">
+                <span class="carousel-link">
                     <picture class="picture-box">
-                        <img class="vj-slide-image" src = "`+ VjDefaultPath + `image.png" />
+                        <img loading="lazy" class="vj-slide-image img-fluid" src = "`+ VjDefaultPath + `image.png" />
 			        </picture>
-                </a>
+                </span>
             </div>`
 			);
-
-			$('.gjs-frame').contents().find('#' + Selected.getId()).carousel('dispose').carousel({ interval: false }).carousel(slideInner.components().models.length - 1);
 
 			var Indicators = Selected.components().models.find(m => m.attributes.type == 'indicators');
 
 			if (typeof Indicators != 'undefined')
-				Indicators.components().add('<li data-bs-target="#' + Selected.getId() + '" data-bs-slide-to="' + Indicators.components().length + '"></li>');
+				Indicators.components().add('<li data-bs-target="#' + Selected.getId() + '" data-bs-slide-to="' + Indicators.components().length + '" class="carousel-indicator"></li>');
+
+			$('.gjs-frame').contents().find('#' + Selected.getId()).carousel('dispose').carousel(slideInner.components().models.length - 1);
 
 			$.each(getAllComponents(slideInner.components().last()), function (i, n) {
 				if (n.attributes.type == 'carousel-image') {
@@ -764,7 +771,7 @@
 			const target = this.target;
 			var slider = target.closest('[data-gjs-type="carousel"]') || target.parent().closest('[data-gjs-type="carousel"]');
 
-			$('.gjs-frame').contents().find('#' + slider.getId()).carousel('dispose').carousel({ interval: false }).carousel(opts.slideIndex);
+			$('.gjs-frame').contents().find('#' + slider.getId()).carousel('dispose').carousel(opts.slideIndex);
 
 			setTimeout(function () {
 				$.each(getAllComponents(opts.slide), function (i, n) {
@@ -772,7 +779,7 @@
 						VjEditor.select(n);
 					}
 				});
-			}, 500);
+			}, 1000);
 		}
 	});
 
@@ -822,10 +829,10 @@
 			var controlPrev = clone.components().models.find(m => m.attributes.type == 'prev');
 
 			if (typeof controlNext != 'undefined')
-				controlNext.addAttributes({ 'href': '#' + modelId });
+				controlNext.addAttributes({ 'data-bs-target': '#' + modelId });
 
 			if (typeof controlPrev != 'undefined')
-				controlPrev.addAttributes({ 'href': '#' + modelId });
+				controlPrev.addAttributes({ 'data-bs-target': '#' + modelId });
 
 			target.parent().append(clone);
 		}
@@ -835,10 +842,15 @@
 		run(editor, sender, opts = {}) {
 			this.editor = editor;
 			this.options = opts;
-			this.target = opts.target || editor.getSelected();
+			this.target = opts.slider || editor.getSelected();
 			const target = this.target;
 
-			$('.gjs-frame').contents().find('#' + target.getId()).carousel('dispose').carousel({ interval: false }).carousel('prev');
+			$('.gjs-frame').contents().find('#' + target.getId()).carousel('prev');
+
+			setTimeout(function () {
+				var image = target.closest('[data-gjs-type="carousel"]').find('.carousel-item.active img');
+				editor.select(image);
+			}, 1000);
 		}
 	});
 
@@ -846,10 +858,15 @@
 		run(editor, sender, opts = {}) {
 			this.editor = editor;
 			this.options = opts;
-			this.target = opts.target || editor.getSelected();
+			this.target = opts.slider || editor.getSelected();
 			const target = this.target;
 
-			$('.gjs-frame').contents().find('#' + target.getId()).carousel('dispose').carousel({ interval: false }).carousel('next');
+			$('.gjs-frame').contents().find('#' + target.getId()).carousel('next');
+
+			setTimeout(function () {
+				var image = target.closest('[data-gjs-type="carousel"]').find('.carousel-item.active img');
+				editor.select(image);
+			}, 1000);
 		}
 	});
 }

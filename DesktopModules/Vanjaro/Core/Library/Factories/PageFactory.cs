@@ -144,7 +144,7 @@ namespace Vanjaro.Core
                         }
                         if (IsDelete && item.Value.ModuleTitle != Components.Constants.AccountLogin)
                         {
-                            if (string.IsNullOrEmpty(HttpContext.Current.Request.QueryString["m2v"]) && !HttpUtility.ParseQueryString(HttpContext.Current.Request.UrlReferrer.Query).AllKeys.Contains("skinsrc") && !HttpUtility.ParseQueryString(HttpContext.Current.Request.UrlReferrer.Query).AllKeys.Contains("m2v") && !HttpContext.Current.Request.UrlReferrer.AbsoluteUri.Contains("m2v/"))
+                            if (string.IsNullOrEmpty(HttpContext.Current.Request.QueryString["m2v"]) && HttpContext.Current.Request.UrlReferrer != null && !HttpUtility.ParseQueryString(HttpContext.Current.Request.UrlReferrer.Query).AllKeys.Contains("skinsrc") && !HttpUtility.ParseQueryString(HttpContext.Current.Request.UrlReferrer.Query).AllKeys.Contains("m2v") && !HttpContext.Current.Request.UrlReferrer.AbsoluteUri.Contains("m2v/"))
                             {
                                 DeleteModule(TabID, item.Key);
                             }
@@ -174,9 +174,29 @@ namespace Vanjaro.Core
                         }
                     }
                 }
+
                 if (EntityIDs.Count > 0)
                 {
-                    SectionPermissionFactory.DeletePermissions(EntityIDs);
+                    List<Pages> Core_pages = GetAllByTabID(TabID).OrderByDescending(a => a.Version).ToList();
+
+                    foreach (Pages page in Core_pages)
+                    {
+                        HtmlDocument html = new HtmlDocument();
+                        html.LoadHtml(page.Content);
+                        IEnumerable<HtmlNode> query = html.DocumentNode.SelectNodes("//*[@perm]");
+
+                        if (query != null)
+                        {
+                            foreach (HtmlNode item in query.ToList())
+                            {
+                                if (!string.IsNullOrEmpty(item.Attributes.Where(a => a.Name == "perm").FirstOrDefault().Value))
+                                    EntityIDs.Remove(int.Parse(item.Attributes.Where(a => a.Name == "perm").FirstOrDefault().Value));
+                            }
+                        }
+                    }
+
+                    if (EntityIDs.Count > 0)
+                        SectionPermissionFactory.DeletePermissions(EntityIDs);
                 }
             }
 

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using DotNetNuke.Entities.Tabs;
 
 namespace Vanjaro.URL.Managers
 {
@@ -118,17 +119,17 @@ namespace Vanjaro.URL.Managers
         {
             return URLFactory.GetDefaultURL(ModuleID, EntityID, Entity, Language);
         }
-        public static URLEntity GetURL(string Slug)
+        public static URLEntity GetURL(string Slug, int PortalID)
         {
-            return URLFactory.GetURL(0, Slug);
+            return URLFactory.GetURL(0, Slug, PortalID);
         }
-        public static URLEntity GetURL(int ModuleID, string Slug)
+        public static URLEntity GetURL(int ModuleID, string Slug, int PortalID)
         {
-            return URLFactory.GetURL(ModuleID, Slug);
+            return URLFactory.GetURL(ModuleID, Slug, PortalID);
         }
-        public static URLEntity GetURL(int ModuleID, string[] Slugs)
+        public static URLEntity GetURL(int ModuleID, string[] Slugs, int PortalID)
         {
-            return URLFactory.GetURL(ModuleID, Slugs);
+            return URLFactory.GetURL(ModuleID, Slugs, PortalID);
         }
         public static int GetSlugTabID(string[] urlParms, ref string Slug, PortalInfo Pi)
         {
@@ -137,6 +138,11 @@ namespace Vanjaro.URL.Managers
         public static int GetSlugTabID(string[] urlParms, ref string Slug, int TabID, PortalInfo Pi)
         {
             return URLFactory.GetSlugTabID(urlParms, ref Slug, TabID, Pi);
+        }
+
+        public static string GetFriendlyURL(PortalSettings PortalSettings, TabInfo tabInfo, int ModuleID, string QueryParameter)
+        {
+            return URLFactory.GetFriendlyURL(PortalSettings, tabInfo, ModuleID, QueryParameter);
         }
 
         public static string GetFriendlyURL(PortalSettings pS, URLEntity urlEntity)

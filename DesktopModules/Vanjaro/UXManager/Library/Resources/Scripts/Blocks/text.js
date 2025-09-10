@@ -16,15 +16,53 @@ export default (editor, config = {}) => {
 
 	let domc = editor.DomComponents;
 	const textType = domc.getType('text');
-	const textModel = textType.model;
 	const textView = textType.view;
 
 	domc.addType('text', {
-		model: textModel.extend({
-			defaults: Object.assign({}, textModel.prototype.defaults, {
+		model: {
+			initToolbar() {
+				var model = this;
+				if (!model.get('toolbar')) {
+					var tb = [];
+
+					tb.push({
+						attributes: { class: 'fa fa-arrow-up' },
+						command: function (t) {
+							return t.runCommand("core:component-exit", {
+								force: 1
+							})
+						}
+					});
+
+					if (model.get('draggable')) {
+						tb.push({
+							attributes: { class: 'fa fa-arrows' },
+							command: 'tlb-move',
+						});
+					}
+
+					if (model.get('copyable')) {
+						tb.push({
+							attributes: { class: 'fa fa-clone' },
+							command: 'tlb-clone',
+						});
+					}
+
+					if (model.get('removable')) {
+						tb.push({
+							attributes: { class: 'fa fa-trash-o' },
+							command: 'tlb-delete',
+						});
+					}
+
+					model.set('toolbar', tb);
+				}
+			},
+			defaults: {
+				'custom-name': 'Text',
 				droppable: false,
-                classes: ['vj-text', 'text-dark', 'paragraph-style-1'],
-                text: true,
+				classes: ['vj-text', 'text-dark', 'paragraph-style-1'],
+				text: true,
 				traits: [
 					{
 						label: 'Alignment',
@@ -46,12 +84,12 @@ export default (editor, config = {}) => {
 						type: "custom_range",
 						cssproperties: [{ name: "font-size" }],
 						units: [
-                            { name: 'px', min: 10, max: 100, step: 1, value: 16 },
-                            { name: '%', min: 10, max: 100, step: 1, value: 100 },
-                            { name: 'em', min: 0.5, max: 10, step: 0.1, value: 1 },
-                            { name: 'rem', min: 0.5, max: 10, step: 0.1, value: 1 },
-                            { name: 'vw', min: 0.5, max: 10, step: 0.1, value: 1 },
-                            { name: 'vh', min: 0.5, max: 10, step: 0.1, value: 1.5 },
+							{ name: 'px', min: 10, max: 100, step: 1, value: 16 },
+							{ name: '%', min: 10, max: 100, step: 1, value: 100 },
+							{ name: 'em', min: 0.5, max: 10, step: 0.1, value: 1 },
+							{ name: 'rem', min: 0.5, max: 10, step: 0.1, value: 1 },
+							{ name: 'vw', min: 0.5, max: 10, step: 0.1, value: 1 },
+							{ name: 'vh', min: 0.5, max: 10, step: 0.1, value: 1.5 },
 						],
 						unit: "px",
 						changeProp: 1
@@ -79,49 +117,100 @@ export default (editor, config = {}) => {
 						name: 'styles',
 						type: 'preset_radio',
 						options: [
-							{ id: 'paragraph-style-1', name: 'Style 1', class: 'paragraph-style-1' },
-							{ id: 'paragraph-style-2', name: 'Style 2', class: 'paragraph-style-2' },
-							{ id: 'paragraph-style-3', name: 'Style 3', class: 'paragraph-style-3' },
-							{ id: 'paragraph-style-4', name: 'Style 4', class: 'paragraph-style-4' },
-							{ id: 'paragraph-style-5', name: 'Style 5', class: 'paragraph-style-5' },
-							{ id: 'paragraph-style-6', name: 'Style 6', class: 'paragraph-style-6' },
-							{ id: 'paragraph-style-7', name: 'Style 7', class: 'paragraph-style-7' },
-							{ id: 'paragraph-style-8', name: 'Style 8', class: 'paragraph-style-8' },
-							{ id: 'paragraph-style-9', name: 'Style 9', class: 'paragraph-style-9' },
-							{ id: 'paragraph-style-10', name: 'Style 10', class: 'paragraph-style-10' },
+							{ id: 'paragraph-style-1', name: 'Style 1', class: 'paragraph-style-1', DisplayName: 'A' },
+							{ id: 'paragraph-style-2', name: 'Style 2', class: 'paragraph-style-2', DisplayName: 'B' },
+							{ id: 'paragraph-style-3', name: 'Style 3', class: 'paragraph-style-3', DisplayName: 'C' },
+							{ id: 'paragraph-style-4', name: 'Style 4', class: 'paragraph-style-4', DisplayName: 'D' },
+							{ id: 'paragraph-style-5', name: 'Style 5', class: 'paragraph-style-5', DisplayName: 'E' },
+							{ id: 'paragraph-style-6', name: 'Style 6', class: 'paragraph-style-6', DisplayName: 'F' },
+							{ id: 'paragraph-style-7', name: 'Style 7', class: 'paragraph-style-7', DisplayName: 'G' },
+							{ id: 'paragraph-style-8', name: 'Style 8', class: 'paragraph-style-8', DisplayName: 'H' },
+							{ id: 'paragraph-style-9', name: 'Style 9', class: 'paragraph-style-9', DisplayName: 'I' },
+							{ id: 'paragraph-style-10', name: 'Style 10', class: 'paragraph-style-10', DisplayName: 'J' },
 						],
 						default: 'Style 1',
 						changeProp: 1,
 					}
 				]
-			}),
+			},
 		},
-			{
-				isComponent(el) {
-					if (el && ((el.classList && el.classList.contains('vj-text')) || (el.tagName && el.tagName.toLowerCase() == 'p'))) {
-						return { type: 'text' };
-					}
+			isComponent(el) {
+				if (el && (el.classList && el.classList.contains('vj-text'))) {
+					return { type: 'text' };
 				}
-			}),
-		view: textView.extend({
+			}
+		,
+		view: {
 			init() {
 				if (this.model.parent().attributes.type == 'text' || this.model.parent().attributes.type == 'heading' || this.model.parent().attributes.type == 'list-text')
 					this.model.removeClass(this.getClasses());
 			},
 			onRender() {
-				var hasClass = this.model.getClasses().find(v => v == 'vj-text' || v == 'text-dark')
-				if (typeof hasClass == 'undefined' && this.model.tagName == 'p')
-					this.model.addClass('vj-text text-dark');
+
+				var model = this.model;
+				var trait = model.getTrait('styles');
+
+				if (trait) {
+
+					var Style = model.attributes.styles || 'Style 1';
+					var Option = trait.attributes.options.find(x => x.name === Style);
+					var DisplayName = "";
+
+					if (typeof Option != "undefined")
+						DisplayName = Option.DisplayName;
+
+					if (model.attributes['custom-name'].indexOf(' - ' + DisplayName) == -1)
+						model.set('custom-name', model.getName() + ' - ' + DisplayName);
+				}
 			}
-		})
+		}
 	});
 
 	domc.addType('text-inner', {
-		model: textModel.extend({
-			defaults: Object.assign({}, textModel.prototype.defaults, {
+		model: {
+			initToolbar() {
+				var model = this;
+				if (!model.get('toolbar')) {
+					var tb = [];
+
+					tb.push({
+						attributes: { class: 'fa fa-arrow-up' },
+						command: function (t) {
+							return t.runCommand("core:component-exit", {
+								force: 1
+							})
+						}
+					});
+
+					if (model.get('draggable')) {
+						tb.push({
+							attributes: { class: 'fa fa-arrows' },
+							command: 'tlb-move',
+						});
+					}
+
+					if (model.get('copyable')) {
+						tb.push({
+							attributes: { class: 'fa fa-clone' },
+							command: 'tlb-clone',
+						});
+					}
+
+					if (model.get('removable')) {
+						tb.push({
+							attributes: { class: 'fa fa-trash-o' },
+							command: 'tlb-delete',
+						});
+					}
+
+					model.set('toolbar', tb);
+				}
+			},
+			defaults: {
 				droppable: false,
 				'custom-name': 'Text Inner',
-				classes: ['vj-text', 'text-dark'],
+                classes: ['vj-text', 'text-dark'],
+                text: true,
 				tagName: 'p',
 				traits: [
 					{
@@ -142,16 +231,16 @@ export default (editor, config = {}) => {
 						name: "fontsize",
 						type: "custom_range",
 						cssproperties: [{ name: "font-size" }],
-                        units: [
-                            { name: 'px', min: 10, max: 100, step: 1, value: 16 },
-                            { name: '%', min: 10, max: 100, step: 1, value: 100 },
-                            { name: 'em', min: 0.5, max: 10, step: 0.1, value: 1 },
-                            { name: 'rem', min: 0.5, max: 10, step: 0.1, value: 1 },
-                            { name: 'vw', min: 0.5, max: 10, step: 0.1, value: 1 },
-                            { name: 'vh', min: 0.5, max: 10, step: 0.1, value: 1 },
-                        ],
+						units: [
+							{ name: 'px', min: 10, max: 100, step: 1, value: 16 },
+							{ name: '%', min: 10, max: 100, step: 1, value: 100 },
+							{ name: 'em', min: 0.5, max: 10, step: 0.1, value: 1 },
+							{ name: 'rem', min: 0.5, max: 10, step: 0.1, value: 1 },
+							{ name: 'vw', min: 0.5, max: 10, step: 0.1, value: 1 },
+							{ name: 'vh', min: 0.5, max: 10, step: 0.1, value: 1 },
+						],
 						unit: "px",
-                        changeProp: 1,
+						changeProp: 1,
 					}, {
 						label: "Color",
 						name: "color",
@@ -175,29 +264,47 @@ export default (editor, config = {}) => {
 						name: 'styles',
 						type: 'preset_radio',
 						options: [
-							{ id: 'paragraph-style-1', name: 'Style 1', class: 'paragraph-style-1' },
-							{ id: 'paragraph-style-2', name: 'Style 2', class: 'paragraph-style-2' },
-							{ id: 'paragraph-style-3', name: 'Style 3', class: 'paragraph-style-3' },
-							{ id: 'paragraph-style-4', name: 'Style 4', class: 'paragraph-style-4' },
-							{ id: 'paragraph-style-5', name: 'Style 5', class: 'paragraph-style-5' },
-							{ id: 'paragraph-style-6', name: 'Style 6', class: 'paragraph-style-6' },
-							{ id: 'paragraph-style-7', name: 'Style 7', class: 'paragraph-style-7' },
-							{ id: 'paragraph-style-8', name: 'Style 8', class: 'paragraph-style-8' },
-							{ id: 'paragraph-style-9', name: 'Style 9', class: 'paragraph-style-9' },
-							{ id: 'paragraph-style-10', name: 'Style 10', class: 'paragraph-style-10' },
+							{ id: 'paragraph-style-1', name: 'Style 1', class: 'paragraph-style-1', DisplayName: 'A' },
+							{ id: 'paragraph-style-2', name: 'Style 2', class: 'paragraph-style-2', DisplayName: 'B' },
+							{ id: 'paragraph-style-3', name: 'Style 3', class: 'paragraph-style-3', DisplayName: 'C' },
+							{ id: 'paragraph-style-4', name: 'Style 4', class: 'paragraph-style-4', DisplayName: 'D' },
+							{ id: 'paragraph-style-5', name: 'Style 5', class: 'paragraph-style-5', DisplayName: 'E' },
+							{ id: 'paragraph-style-6', name: 'Style 6', class: 'paragraph-style-6', DisplayName: 'F' },
+							{ id: 'paragraph-style-7', name: 'Style 7', class: 'paragraph-style-7', DisplayName: 'G' },
+							{ id: 'paragraph-style-8', name: 'Style 8', class: 'paragraph-style-8', DisplayName: 'H' },
+							{ id: 'paragraph-style-9', name: 'Style 9', class: 'paragraph-style-9', DisplayName: 'I' },
+							{ id: 'paragraph-style-10', name: 'Style 10', class: 'paragraph-style-10', DisplayName: 'J' },
 						],
 						default: 'Style 1',
 					}
 				]
-			}),
+			},
 		},
-			{
-				isComponent(el) {
-					if (el && el.classList && el.classList.contains('text-inner')) {
-						return { type: 'text-inner' };
-					}
+			isComponent(el) {
+				if (el && el.classList && el.classList.contains('text-inner')) {
+					return { type: 'text-inner' };
 				}
-			}),
-		view: textView
+			}
+		,
+		view: {
+			onRender() {
+
+				var model = this.model;
+				var trait = model.getTrait('styles');
+
+				if (trait) {
+
+					var Style = model.attributes.styles || 'Style 1';
+					var Option = trait.attributes.options.find(x => x.name === Style);
+					var DisplayName = "";
+
+					if (typeof Option != "undefined")
+						DisplayName = Option.DisplayName;
+
+					if (model.attributes['custom-name'].indexOf(' - ' + DisplayName) == -1)
+						model.set('custom-name', 'Text Inner - ' + DisplayName);
+				}
+			}
+		}
 	});
 }

@@ -1,4 +1,4 @@
-﻿import grapesjs from 'grapesjs';
+import grapesjs from 'grapesjs';
 import { jsPanel } from 'jspanel4/es6module/jspanel.js';
 
 global.VjEditor = null;
@@ -10,9 +10,12 @@ global.GrapesjsInit;
 global.CurrentExtTabUrl = '';
 global.IsVJEditorSaveCall = true;
 global.IsVJCBRendered = false;
+global.IsPublished = false;
+global.m2v = false;
+global.Comment = '';
 
 $(window).load(function () {
-	if ($(window).width() < 1000) {
+	if ($(window).width() < 1260 || typeof vjEditorSettings == 'undefined') {
 		$(".ToolbarItem li:not(.PageSettings),.toolmanager,.more_icons,.blockItem.blocksmenu ").hide(0);
 		$(".block-manager > div").not("#MenuSettings,.Menupanel-top").hide(0);
 		$(".Searchresult ul").empty();
@@ -69,6 +72,8 @@ $(document).ready(function () {
 								}
 							}
 						}
+						if (!$('.optimizing-overlay').length)
+							$('.vj-wrapper').prepend('<div class="optimizing-overlay"><h1><img class="centerloader" src="' + VjDefaultPath + 'loading.svg" />Please wait</h1></div>');
 						var sf = $.ServicesFramework(-1);
 						$.ajax({
 							type: "Post",
@@ -79,7 +84,7 @@ $(document).ready(function () {
 								'RequestVerificationToken': sf.getAntiForgeryValue()
 							},
 							success: function (data) {
-
+								$('.vj-wrapper').find('.optimizing-overlay').remove();
 								if (data.Html != undefined && data.Html.length > 0) {
 									var LibraryBlock = VjEditor.BlockManager.add('LibraryBlock', {
 										content: data.Html,
@@ -125,6 +130,9 @@ $(document).ready(function () {
 		});
 	}
 
+	//Tooltip
+	$('[data-bs-toggle="tooltip"]').tooltip();
+
 	$(".pubish-btn").click(function (e) {
 		e.preventDefault();
 
@@ -138,7 +146,7 @@ $(document).ready(function () {
 					},
 					function (inputValue) {
 						if ($('#VJReviewComment', parent.document).val() != '') {
-							editor.StorageManager.getStorages().remote.attributes.params.Comment = $('#VJReviewComment', parent.document).val();
+							Comment = $('#VJReviewComment', parent.document).val();
 							RunSaveCommand();
 							$('#VJBtnPublish').addClass('disabled');
 							$('.gjs-cv-canvas__frames').addClass('lockcanvas');
@@ -163,7 +171,7 @@ $(document).ready(function () {
 						window.parent.StyleGlobal(component);
 				});
 			}
-
+			$(VjEditor.Canvas.getBody()).find('[data-gjs-type="globalblockwrapper"]').css('pointer-events', '');
 		};
 
 		var waitForEl = function (selector, size, callback) {
@@ -200,17 +208,11 @@ $(document).ready(function () {
 
 						if (imgEl) {
 
-                            if ($(imgEl).parents('.link').length)
-                                $(imgEl).parents('.link').css('width', '100%');
+							if ($(imgEl).parents('[data-gjs-type="link"]').length)
+								$(imgEl).parents('[data-gjs-type="link"]').css('width', '100%');
 
-                            $(imgEl).parents('.image-box').css('width', '100%');
-
-                            var imgWidth = $(imgEl).parents('.image-box').width();
-
-                            if ($(imgEl).parents('.link').length)
-                                $(imgEl).parents('.link, image-box').css('width', '100%');
-
-                            $(imgEl).parents('.image-box').css('width', '');
+							var imgWidth;
+							imgWidth = $(imgEl).parents('.picture-box').width();
 
 							if (imgWidth && imgWidth > 0) {
 								var calcWidth = Math.round((imgWidth / size) * 100);
@@ -245,7 +247,7 @@ $(document).ready(function () {
 			}
 		};
 		var optImages = jQuery.grep(getAllComponents(), function (n, i) {
-			return (n.attributes.type == 'image') && (typeof n.getStyle()['width'] == 'undefined') && (n.parent().attributes.type == 'picture-box') && (typeof n.parent().components().models[0] != 'undefined') && (typeof n.parent().components().models[1] != 'undefined');
+			return (n.attributes.optimize) && (n.parent().attributes.type == 'picture-box') && (typeof n.parent().components().models[0] != 'undefined') && (typeof n.parent().components().models[1] != 'undefined');
 		});
 
 		if (optImages != undefined && optImages.length > 0) {
@@ -269,6 +271,9 @@ $(document).ready(function () {
 		setTimeout(function () {
 			$(window.parent.document.body).find('#VJReviewComment').focus();
 		}, 100);
+
+		if (vjEditorSettings.PublishLink != null && vjEditorSettings.PublishLink != '')
+			OpenPopUp(null, 900, 'right', VjLocalized.Setting, vjEditorSettings.PublishLink);
 	});
 
 	var VJAutoSaveTimeOutid;
@@ -305,21 +310,39 @@ $(document).ready(function () {
 
 	global.GrapesjsInit = function () {
 
-		if (isEditPage()) {
+		if (isEditPage() && typeof vjEditorSettings != 'undefined') {
+
+			if (vjEditorSettings.PublishText != null && vjEditorSettings.PublishText != '')
+				$('#VJBtnPublish').text(vjEditorSettings.PublishText);
 
 			if (!vjEditorSettings.EditPage) {
 
-				$(document).on("click", function (e) {
-					if ($(e.target).parents('.sidebar').length <= 0) {
-						VjEditor.select();
-						ShowBlockUI();
-					}
-				});
+				var applinkmarkup = '';
+				var tempMarkup = '';
 
-				$('#vjEditor,' + vjEditorSettings.ContainerID).scroll(function () {
-					debounce(VjEditor.refresh(), 100);
-				});
+				if (vjEditorSettings.AppName && vjEditorSettings.AppTitle) {
+
+					if (vjEditorSettings.AppLink != undefined) {
+
+						if (vjEditorSettings.AppLink.onClick != undefined)
+							applinkmarkup = "<div class=\"app-name\"><a href=\"javascript:void(0);\" onClick=\"" + vjEditorSettings.AppLink.onClick + "\"><span class=\"app-link\">" + vjEditorSettings.AppName + "</span></a></div>";
+
+						if (vjEditorSettings.AppLink.OpenInNewWindow)
+							applinkmarkup = "<div class=\"app-name\"><a href=\"" + vjEditorSettings.AppLink.OpenInNewWindow + "\"><span \"app-link\">" + vjEditorSettings.AppName + "</span></a></div>";
+
+						tempMarkup = applinkmarkup;
+					}
+					else
+						tempMarkup = '<div class="app-name">' + vjEditorSettings.AppName + '</div>';
+
+					var markup = '<div class="app-header"><div class="app-title"><strong>Editing</strong>: ' + vjEditorSettings.AppTitle + '</div>' + tempMarkup + '</div>';
+					$('.vj-wrapper').prepend(markup);
+				}
 			}
+
+			$('#vjEditor').scroll(function () {
+				debounce(VjEditor.refresh(), 100);
+			});
 
 			if (GetParameterByName('m2v', parent.window.location) != null && GetParameterByName('m2v', parent.window.location).startsWith('true')) {
 				$(window.parent.document.body).find('#dnn_ContentPane').prepend('<div class="optimizing-overlay"><h1><img class="centerloader" src="' + VjDefaultPath + 'loading.svg" />Please Wait</h1></div>');
@@ -394,14 +417,30 @@ $(document).ready(function () {
 									this.content.style.padding = '0';
 								},
 							});
+
 							var vjcomps = eval(VJLandingPage.components);
+							var plugins = [];
+
 							BuildAppComponent(vjcomps);
 							BuildAppComponentFromHtml(vjcomps, VJLandingPage.html);
 							BuildBlockComponent(vjcomps);
 							vjcomps = FilterComponents(vjcomps);
 
-							if (typeof LoadThemeBlocks != 'undefined')
-								LoadThemeBlocks(grapesjs);
+							plugins.push('vjpreset');
+
+							if (vjEditorSettings.Blocks && typeof LoadBlocks != 'undefined') {
+								LoadBlocks(grapesjs);
+								plugins.push('customblocks');
+							}
+							else {
+
+								plugins.push('modulewrapper', 'blockwrapper', 'vjblocks', 'customcode');
+
+								if (typeof LoadThemeBlocks != 'undefined') {
+									LoadThemeBlocks(grapesjs);
+									plugins.push('ThemeBlocks');
+								}
+							}
 
 							if (typeof LoadCustomCode != 'undefined')
 								LoadCustomCode(grapesjs);
@@ -423,10 +462,10 @@ $(document).ready(function () {
 								showOffsets: 1,
 								avoidInlineStyle: 1,
 								noticeOnUnload: 0,
-								container: vjEditorSettings.ContainerID,
+								container: '#vjEditor',
 								height: '100%',
 								fromElement: vjcomps != undefined ? false : true,
-								plugins: ['modulewrapper', 'blockwrapper', 'vjpreset', 'ThemeBlocks', 'customcode'],
+								plugins: plugins,
 								pluginsOpts: {
 									'vj-preset': {
 										colorPicker: 'default',
@@ -453,6 +492,8 @@ $(document).ready(function () {
 												units: [
 													{ name: 'px', min: -50, max: 200, step: 1 },
 													{ name: '%', min: -100, max: 100, step: 1 },
+													{ name: 'rem', min: 0.5, max: 10, step: 0.1 },
+													{ name: 'em', min: 0.5, max: 10, step: 0.1 },
 													{ name: 'vw', min: -100, max: 100, step: 1 },
 													{ name: 'vh', min: -100, max: 100, step: 1 }
 												],
@@ -466,6 +507,8 @@ $(document).ready(function () {
 												units: [
 													{ name: 'px', min: -50, max: 200, step: 1 },
 													{ name: '%', min: -100, max: 100, step: 1 },
+													{ name: 'rem', min: 0.5, max: 10, step: 0.1 },
+													{ name: 'em', min: 0.5, max: 10, step: 0.1 },
 													{ name: 'vw', min: -100, max: 100, step: 1 },
 													{ name: 'vh', min: -100, max: 100, step: 1 }
 												],
@@ -479,6 +522,8 @@ $(document).ready(function () {
 												units: [
 													{ name: 'px', min: -50, max: 200, step: 1 },
 													{ name: '%', min: -100, max: 100, step: 1 },
+													{ name: 'rem', min: 0.5, max: 10, step: 0.1 },
+													{ name: 'em', min: 0.5, max: 10, step: 0.1 },
 													{ name: 'vw', min: -100, max: 100, step: 1 },
 													{ name: 'vh', min: -100, max: 100, step: 1 }
 												],
@@ -492,6 +537,8 @@ $(document).ready(function () {
 												units: [
 													{ name: 'px', min: -50, max: 200, step: 1 },
 													{ name: '%', min: -100, max: 100, step: 1 },
+													{ name: 'rem', min: 0.5, max: 10, step: 0.1 },
+													{ name: 'em', min: 0.5, max: 10, step: 0.1 },
 													{ name: 'vw', min: -100, max: 100, step: 1 },
 													{ name: 'vh', min: -100, max: 100, step: 1 }
 												],
@@ -510,6 +557,8 @@ $(document).ready(function () {
 												units: [
 													{ name: 'px', min: 0, max: 200, step: 1 },
 													{ name: '%', min: 0, max: 100, step: 1 },
+													{ name: 'rem', min: 0.5, max: 10, step: 0.1 },
+													{ name: 'em', min: 0.5, max: 10, step: 0.1 },
 													{ name: 'vw', min: 0, max: 100, step: 1 },
 													{ name: 'vh', min: 0, max: 100, step: 1 }
 												],
@@ -523,6 +572,8 @@ $(document).ready(function () {
 												units: [
 													{ name: 'px', min: 0, max: 200, step: 1 },
 													{ name: '%', min: 0, max: 100, step: 1 },
+													{ name: 'rem', min: 0.5, max: 10, step: 0.1 },
+													{ name: 'em', min: 0.5, max: 10, step: 0.1 },
 													{ name: 'vw', min: 0, max: 100, step: 1 },
 													{ name: 'vh', min: 0, max: 100, step: 1 }
 												],
@@ -536,6 +587,8 @@ $(document).ready(function () {
 												units: [
 													{ name: 'px', min: 0, max: 200, step: 1 },
 													{ name: '%', min: 0, max: 100, step: 1 },
+													{ name: 'rem', min: 0.5, max: 10, step: 0.1 },
+													{ name: 'em', min: 0.5, max: 10, step: 0.1 },
 													{ name: 'vw', min: 0, max: 100, step: 1 },
 													{ name: 'vh', min: 0, max: 100, step: 1 }
 												],
@@ -549,6 +602,8 @@ $(document).ready(function () {
 												units: [
 													{ name: 'px', min: 0, max: 200, step: 1 },
 													{ name: '%', min: 0, max: 100, step: 1 },
+													{ name: 'rem', min: 0.5, max: 10, step: 0.1 },
+													{ name: 'em', min: 0.5, max: 10, step: 0.1 },
 													{ name: 'vw', min: 0, max: 100, step: 1 },
 													{ name: 'vh', min: 0, max: 100, step: 1 }
 												],
@@ -567,6 +622,8 @@ $(document).ready(function () {
 												units: [
 													{ name: 'px', min: 0, max: 1920, step: 1 },
 													{ name: '%', min: 0, max: 100, step: 1 },
+													{ name: 'rem', min: 0.5, max: 10, step: 0.1 },
+													{ name: 'em', min: 0.5, max: 10, step: 0.1 },
 													{ name: 'vw', min: 0, max: 100, step: 1 },
 												],
 												unit: 'px',
@@ -578,6 +635,8 @@ $(document).ready(function () {
 												units: [
 													{ name: 'px', min: 0, max: 1920, step: 1 },
 													{ name: '%', min: 0, max: 100, step: 1 },
+													{ name: 'rem', min: 0.5, max: 10, step: 0.1 },
+													{ name: 'em', min: 0.5, max: 10, step: 0.1 },
 													{ name: 'vw', min: 0, max: 100, step: 1 },
 												],
 												unit: 'px',
@@ -589,6 +648,8 @@ $(document).ready(function () {
 												units: [
 													{ name: 'px', min: 0, max: 1920, step: 1 },
 													{ name: '%', min: 0, max: 100, step: 1 },
+													{ name: 'rem', min: 0.5, max: 10, step: 0.1 },
+													{ name: 'em', min: 0.5, max: 10, step: 0.1 },
 													{ name: 'vw', min: 0, max: 100, step: 1 },
 												],
 												unit: 'px',
@@ -600,6 +661,8 @@ $(document).ready(function () {
 												units: [
 													{ name: 'px', min: 0, max: 1080, step: 1 },
 													{ name: '%', min: 0, max: 100, step: 1 },
+													{ name: 'rem', min: 0.5, max: 10, step: 0.1 },
+													{ name: 'em', min: 0.5, max: 10, step: 0.1 },
 													{ name: 'vh', min: 0, max: 100, step: 1 },
 												],
 												unit: 'px',
@@ -611,6 +674,8 @@ $(document).ready(function () {
 												units: [
 													{ name: 'px', min: 0, max: 1080, step: 1 },
 													{ name: '%', min: 0, max: 100, step: 1 },
+													{ name: 'rem', min: 0.5, max: 10, step: 0.1 },
+													{ name: 'em', min: 0.5, max: 10, step: 0.1 },
 													{ name: 'vh', min: 0, max: 100, step: 1 },
 												],
 												unit: 'px',
@@ -622,6 +687,8 @@ $(document).ready(function () {
 												units: [
 													{ name: 'px', min: 0, max: 1080, step: 1 },
 													{ name: '%', min: 0, max: 100, step: 1 },
+													{ name: 'rem', min: 0.5, max: 10, step: 0.1 },
+													{ name: 'em', min: 0.5, max: 10, step: 0.1 },
 													{ name: 'vh', min: 0, max: 100, step: 1 },
 												],
 												unit: 'px',
@@ -1057,7 +1124,7 @@ $(document).ready(function () {
 											name: 'Display',
 											property: 'display',
 											defaults: 'none',
-											list: [{
+											options: [{
 												value: 'none',
 												name: 'none',
 											}, {
@@ -1074,87 +1141,93 @@ $(document).ready(function () {
 												name: 'flex',
 											}],
 										}, {
-											name: 'Direction',
-											property: 'flex-direction',
-											type: 'customradio',
-											cssproperty: 'flex-direction',
-											UpdateStyles: true,
-											list: [{
-												value: 'row',
-												name: 'Row',
-												img: 'flex-dir-row.png',
+											name: 'Container',
+											property: 'container',
+											type: 'composite',
+											properties: [{
+												name: 'Direction',
+												property: 'flex-direction',
+												type: 'customradio',
+												cssproperty: 'flex-direction',
+												UpdateStyles: true,
+												list: [{
+													value: 'row',
+													name: 'Row',
+													img: 'flex-dir-row.png',
+												}, {
+													value: 'row-reverse',
+													name: 'Row Reverse',
+													img: 'flex-dir-row-rev.png',
+												}, {
+													value: 'column',
+													name: 'Column',
+													img: 'flex-dir-col.png',
+												}, {
+													value: 'column-reverse',
+													name: 'Column Reverse',
+													img: 'flex-dir-col-rev.png',
+												}],
 											}, {
-												value: 'row-reverse',
-												name: 'Row Reverse',
-												img: 'flex-dir-row-rev.png',
+												name: 'Justify',
+												property: 'justify-content',
+												type: 'customradio',
+												UpdateStyles: true,
+												list: [{
+													value: 'flex-start',
+													name: 'Start',
+													img: 'align-left.png'
+												}, {
+													value: 'space-between',
+													name: 'Space Between',
+													img: 'align-between.png',
+												}, {
+													value: 'space-around',
+													name: 'Space Around',
+													img: 'align-around.png',
+												}, {
+													value: 'center',
+													name: 'Center',
+													img: 'align-center.png',
+												}, {
+													value: 'flex-end',
+													name: 'End',
+													img: 'align-right.png',
+												}],
 											}, {
-												value: 'column',
-												name: 'Column',
-												img: 'flex-dir-col.png',
+												name: 'Align',
+												property: 'align-items',
+												type: 'customradio',
+												UpdateStyles: true,
+												list: [{
+													value: 'flex-start',
+													name: 'Start',
+													img: 'align-left.png',
+												}, {
+													value: 'stretch',
+													name: 'Stretch',
+													img: 'align-justify.png',
+												}, {
+													value: 'center',
+													name: 'Center',
+													img: 'align-center.png',
+												}, {
+													value: 'flex-end',
+													name: 'End',
+													img: 'align-right.png',
+												}],
 											}, {
-												value: 'column-reverse',
-												name: 'Column Reverse',
-												img: 'flex-dir-col-rev.png',
+												name: 'Order',
+												property: 'order',
+												type: 'customrange',
+												defaults: 0,
+												step: 1,
+												min: 0,
+												max: 100,
+												cssproperty: 'order',
 											}],
-										}, {
-											name: 'Justify Content',
-											property: 'justify-content',
-											type: 'customradio',
-											UpdateStyles: true,
-											list: [{
-												value: 'flex-start',
-												name: 'Start',
-												img: 'align-left.png'
-											}, {
-												value: 'space-between',
-												name: 'Space Between',
-												img: 'align-between.png',
-											}, {
-												value: 'space-around',
-												name: 'Space Around',
-												img: 'align-around.png',
-											}, {
-												value: 'center',
-												name: 'Center',
-												img: 'align-center.png',
-											}, {
-												value: 'flex-end',
-												name: 'End',
-												img: 'align-right.png',
-											}],
-										}, {
-											name: 'Align Items',
-											property: 'align-items',
-											type: 'customradio',
-											UpdateStyles: true,
-											list: [{
-												value: 'flex-start',
-												name: 'Start',
-												img: 'align-left.png',
-											}, {
-												value: 'stretch',
-												name: 'Stretch',
-												img: 'align-justify.png',
-											}, {
-												value: 'center',
-												name: 'Center',
-												img: 'align-center.png',
-											}, {
-												value: 'flex-end',
-												name: 'End',
-												img: 'align-right.png',
-											}],
-										}, {
-											name: 'Order',
-											property: 'order',
-											type: 'customrange',
-											defaults: 0,
-											step: 1,
-											min: 0,
-											max: 100,
-											cssproperty: 'order',
-										}, {
-											name: 'Flex',
+										},
+										{
+											name: 'Items',
 											property: 'flex',
 											type: 'composite',
 											properties: [{
@@ -1184,31 +1257,32 @@ $(document).ready(function () {
 												unit: 'px',
 												defaults: 'auto',
 												cssproperty: 'flex-basis',
-											}],
-										}, {
-											name: 'Align Self',
-											property: 'align-self',
-											type: 'customradio',
-											UpdateStyles: true,
-											list: [{
-												value: 'auto',
-												name: 'Auto',
-											}, {
-												value: 'flex-start',
-												name: 'Start',
-												img: 'align-left.png',
-											}, {
-												value: 'center',
-												name: 'Center',
-												img: 'align-center.png',
-											}, {
-												value: 'stretch',
-												name: 'Stretch',
-												img: 'align-justify.png'
-											}, {
-												value: 'flex-end',
-												name: 'End',
-												img: 'align-right.png'
+											},
+											{
+												name: 'Align',
+												property: 'align-self',
+												type: 'customradio',
+												UpdateStyles: true,
+												list: [{
+													value: 'auto',
+													name: 'Auto',
+												}, {
+													value: 'flex-start',
+													name: 'Start',
+													img: 'align-left.png',
+												}, {
+													value: 'center',
+													name: 'Center',
+													img: 'align-center.png',
+												}, {
+													value: 'stretch',
+													name: 'Stretch',
+													img: 'align-justify.png'
+												}, {
+													value: 'flex-end',
+													name: 'End',
+													img: 'align-right.png'
+												}],
 											}],
 										}]
 									}, {
@@ -1433,7 +1507,7 @@ $(document).ready(function () {
 												name: 'Clear',
 												property: 'clear',
 												defaults: 'none',
-												list: [{
+												options: [{
 													value: 'none',
 													name: 'none',
 												}, {
@@ -1445,7 +1519,7 @@ $(document).ready(function () {
 												name: 'Overflow Horizontal',
 												property: 'overflow-x',
 												defaults: 'visible',
-												list: [{
+												options: [{
 													value: 'visible',
 													name: 'visible',
 												}, {
@@ -1463,7 +1537,7 @@ $(document).ready(function () {
 												name: 'Overflow Vertical',
 												property: 'overflow-y',
 												defaults: 'visible',
-												list: [{
+												options: [{
 													value: 'visible',
 													name: 'visible',
 												}, {
@@ -1502,7 +1576,7 @@ $(document).ready(function () {
 									}, {
 										name: 'Tablet',
 										width: '768px', // this value will be used on canvas width
-										widthMedia: '991px', // this value will be used in CSS @media
+										widthMedia: '1199px', // this value will be used in CSS @media
 									}, {
 										name: 'Mobile Landscape',
 										width: '700px', // this value will be used on canvas width
@@ -1518,30 +1592,16 @@ $(document).ready(function () {
 									autosave: false,
 									autoload: false,
 									stepsBeforeSave: 1,
-									urlStore: vjEditorSettings.UpdateContentUrl,
-									onComplete(jqXHR, status) {
-										if (jqXHR.IsSuccess) {
-											if (typeof jqXHR.ShowNotification != 'undefined' && jqXHR.ShowNotification)
-												ShowNotification('', VjLocalized.PagePublished, 'success');
-										}
-										else if (jqXHR.Message != undefined && jqXHR.Message != '')
-											ShowNotification('', jqXHR.Message, 'error');
-
-										if (jqXHR.SaveContentNotification != undefined && jqXHR.SaveContentNotification != '') {
-											eval(jqXHR.SaveContentNotification);
+									options: {
+										remote: {
+											urlStore: vjEditorSettings.UpdateContentUrl,
+											headers: {
+												'ModuleId': parseInt(vjEditorSettings.ModuleId),
+												'TabId': parseInt(sf.getTabId()),
+												'RequestVerificationToken': sf.getAntiForgeryValue()
+											},
 										}
 									},
-									params: {
-										EntityID: vjEditorSettings.EntityID,
-										IsPublished: false,
-										m2v: false,
-										Comment: ""
-									},
-									headers: {
-										'ModuleId': parseInt(vjEditorSettings.ModuleId),
-										'TabId': parseInt(sf.getTabId()),
-										'RequestVerificationToken': sf.getAntiForgeryValue()
-									}
 								}
 							});
 
@@ -1553,6 +1613,14 @@ $(document).ready(function () {
 							//setCustomRte();
 							const rte = VjEditor.RichTextEditor;
 							rte.remove('link');
+
+							const isValidAnchor = rte => {
+								const anchor = rte.selection().anchorNode;
+								const parentNode = anchor && anchor.parentNode;
+								return (
+									(parentNode && parentNode.nodeName == 'A')
+								);
+							};
 
 							VjEditor.RichTextEditor.add('link', {
 								icon: '<i class="fa fa-link"/>',
@@ -1576,7 +1644,7 @@ $(document).ready(function () {
 										selected.view.syncContent();
 										VjEditor.getSelected().view.disableEditing();
 										$.each(selected.components().models, function (k, v) {
-											if (v.attributes.content == rtetext) {
+											if ($(v.getEl())[0].innerText == rtetext) {
 												VjEditor.select(v);
 												return;
 											}
@@ -1585,14 +1653,6 @@ $(document).ready(function () {
 									}
 								},
 							});
-
-							const isValidAnchor = rte => {
-								const anchor = rte.selection().anchorNode;
-								const parentNode = anchor && anchor.parentNode;
-								return (
-									(parentNode && parentNode.nodeName == 'A')
-								);
-							};
 
 							const isValidSpan = rte => {
 								const anchor = rte.selection().anchorNode;
@@ -1611,7 +1671,7 @@ $(document).ready(function () {
 								},
 								result: function (rte) {
 									var e = rte.selection().anchorNode;
-									if (e.parentNode.tagName.toLowerCase() == "span") {
+									if (e.parentNode.tagName.toLowerCase() == "span" && (e.parentNode.classList && e.parentNode.classList.contains('text-inner'))) {
 										rte.selection().anchorNode.parentElement.outerHTML = rte.selection().anchorNode.parentElement.innerHTML;
 										VjEditor.getSelected().view.disableEditing();
 									}
@@ -1619,8 +1679,12 @@ $(document).ready(function () {
 										rte.insertHTML(`<span class="text-inner">${rte.selection()}</span>`);
 										var rtetext = `${rte.selection()}`;
 										var selected = VjEditor.getSelected();
+
+										if (selected.attributes.type == 'list-item')
+											selected = selected.findType('list-text')[0];
+
 										selected.view.syncContent();
-										VjEditor.getSelected().view.disableEditing();
+										selected.view.disableEditing();
 										$.each(selected.components().models, function (k, v) {
 											if (v.attributes.content == rtetext) {
 												VjEditor.select(v);
@@ -1632,7 +1696,7 @@ $(document).ready(function () {
 							});
 
 							// Fixed editor is not defined with absolute mode
-							window.editor = VjEditor;
+							window.VjEditor = VjEditor;
 
 							VjEditor.on('load', function () {
 								try { $.ServicesFramework(-1); }
@@ -1645,17 +1709,17 @@ $(document).ready(function () {
 									LoadDesignBlocks();
 								}
 
-								if ($(window).width() < 1000) {
+								if ($(window).width() < 1260) {
 									$(window.parent.document.body).find('.gjs-cv-canvas__frames').addClass('deviceframe');
 								}
 
 								$(window).resize(function () {
-									if ($(window).width() < 1000) {
+									if ($(window).width() < 1260) {
 										$(window.parent.document.body).find('.gjs-cv-canvas__frames').addClass('deviceframe');
 										$(".ToolbarItem li:not(.PageSettings),.toolmanager,.more_icons, .blockItem.blocksmenu ").hide();
 										$("a.blockItem.settings").trigger("click");
 									}
-									else {
+									else if ($(window.parent.document.body).find('.gjs-cv-canvas__frames').hasClass('deviceframe')) {
 										$(window.parent.document.body).find('.gjs-cv-canvas__frames').removeClass('deviceframe');
 										$(".ToolbarItem li,.toolmanager,.more_icons,.blockItem.blocksmenu ").show();
 										$('.ToolbarItem > li:gt(4)').hide();
@@ -1673,7 +1737,11 @@ $(document).ready(function () {
 									}
 								});
 
-								LoadCustomBlocks();
+								if (vjEditorSettings.EditPage)
+									LoadCustomBlocks();
+								else
+									ChangeBlockType();
+
 								VjEditor.UndoManager.start();
 
 								if (VJIsPageDraft == "False")
@@ -1686,25 +1754,17 @@ $(document).ready(function () {
 								else
 									$('.gjs-cv-canvas__frames').removeClass('lockcanvas');
 
-								if (GetParameterByName('m2v', parent.window.location) != null && GetParameterByName('m2v', parent.window.location).startsWith('true') && (VJLandingPage.components == '' || VJLandingPage.components == '[]')) {
+								if (GetParameterByName('m2v', parent.window.location) != null && GetParameterByName('m2v', parent.window.location).startsWith('true') && VJLandingPage.components == '' && VJLandingPage.html != '') {
 									VjEditor.runCommand("save");
-									VjEditor.destroy();
-									// Remove All Managers
-									$('#ContentBlocks, .styleManager, .traitsManager').empty();
-									VjLayerpanel.close();
-									VjInit();
+									parent.window.location.reload();
+									//VjEditor.destroy();
+									//// Remove All Managers
+									//$('#ContentBlocks, .styleManager, .traitsManager').empty();
+									//VjLayerpanel.close();
+									//VjInit();
 								} else if (GetParameterByName('m2v', parent.window.location) != null && GetParameterByName('m2v', parent.window.location).startsWith('true')) {
 									setTimeout(function () { $($(window.parent.document.body).find('#dnn_ContentPane')[0]).find('.optimizing-overlay').remove(); }, 1000);
 								}
-
-								$('.gjs-frame').contents().find("#wrapper").scroll(function () {
-									var $tools = $('#gjs-cv-tools')
-									$tools.hide();
-									clearTimeout($.data(this, 'scrollTimer'));
-									$.data(this, 'scrollTimer', setTimeout(function () {
-										$tools.show();
-									}, 250));
-								});
 
 								if (vjEditorSettings.EditPage && typeof getCookie("vj_UXLoad") != 'undefined' && getCookie("vj_UXLoad") != null && getCookie("vj_UXLoad") != '') {
 
@@ -1730,6 +1790,7 @@ $(document).ready(function () {
 										})
 									}
 								});
+								CleanCssrules();
 							});
 
 							var parentClone = "";
@@ -1737,65 +1798,79 @@ $(document).ready(function () {
 							var sortermarup = '';
 
 							//Sorting TabModules
-							VjEditor.on('sorter:drag:start', function (model, bmodel) {
+							VjEditor.on('component:drag:start', function (model) {
 
 								$('.tlb-app-setting-panel').hide();
 
-								if (typeof bmodel != 'undefined' && typeof bmodel.parent != 'undefined') {
+								if (typeof model != 'undefined' && typeof model.parent != 'undefined') {
 
-									if (bmodel.parent().attributes.type == "column" && bmodel.parent().components().length == 1)
-										$(bmodel.parent().getEl()).attr("data-empty", "true");
+									if ((model.parent.attributes.type == "column" || model.parent.attributes.type == "link") && model.parent.components().length == 1)
+										$(model.parent.getEl()).attr("data-empty", "true");
 
-									var blockwrapper = bmodel.closest('[data-gjs-type="blockwrapper"]');
+									var blockwrapper = model.target.closest('[data-gjs-type="blockwrapper"]');
 
 									if (blockwrapper) {
 										parentRemove = blockwrapper;
 										parentClone = blockwrapper.clone();
 									}
-									else if (bmodel.getName != 'undefined') {
-										if (bmodel.attributes.type == "button" || bmodel.attributes.type == "icon" || bmodel.attributes.type == "list" || bmodel.attributes.type == "list-text") {
-											parentRemove = bmodel.parent();
-											parentClone = bmodel.parent().clone();
+									else if (model.target.getName != 'undefined') {
+										if (model.target.attributes.type == "row" || model.target.attributes.type == "button" || model.target.attributes.type == "icon" || model.target.attributes.type == "list" || model.target.attributes.type == "list-text") {
+											parentRemove = model.parent;
+											parentClone = model.parent.clone();
 										}
-										else if (bmodel.attributes.type == "button-text" || bmodel.attributes.type == "image") {
-											parentRemove = bmodel.parent().parent();
-											parentClone = bmodel.parent().parent().clone();
+										else if (model.target.attributes.type == "image") {
+											parentRemove = model.target.closestType('image-box');
+											parentClone = model.target.closestType('image-box').clone();
 										}
 									}
 								}
 
-								if (model != undefined && model.attributes != undefined && model.attributes.dmid != undefined)
-									sortermarup = model.children[0].innerHTML;
+								if (model.target != undefined && model.target.attributes != undefined && model.target.attributes.attributes != undefined && model.target.attributes.attributes.dmid != undefined)
+									sortermarup = model.target.getEl().children[0].innerHTML;
 
 								VjEditor.runCommand('core:component-outline');
-
 							});
 
-							VjEditor.on('sorter:drag:end', function (model, bmodel) {
+							VjEditor.on('component:drag:end', function (model, bmodel) {
 
-								if (typeof model != 'undefined' && typeof model.modelToDrop != 'undefined') {
+								if (typeof model != 'undefined' && typeof model.target != 'undefined') {
 
-									if (typeof model.modelToDrop.attributes != 'undefined' && model.modelToDrop.attributes.type == "videobox") {
-										model.modelToDrop.components().models.find(t => t.attributes.type == 'video').set({ 'src': model.modelToDrop.attributes.src });
-										$(model.modelToDrop.getEl()).find('iframe').attr('src', model.modelToDrop.attributes.src);
+									if (typeof model.target.attributes != 'undefined' && model.target.attributes.type == "videobox") {
+										model.target.components().models.find(t => t.attributes.type == 'video').set({ 'src': model.target.attributes.src });
+										$(model.target.getEl()).find('iframe').attr('src', model.target.attributes.src);
 									}
-									else if (typeof model.modelToDrop.parent != 'undefined' && model.modelToDrop.parent() && model.modelToDrop.parent().attributes.type == "column")
-										$(model.modelToDrop.parent().getEl()).removeAttr("data-empty");
+									else if (typeof model.parent != 'undefined' && model.parent && (model.parent.attributes.type == "column" || model.parent.attributes.type == "link"))
+										$(model.parent.getEl()).removeAttr("data-empty");
 
-                                    if (parentRemove != '' && parentClone != '') {
-                                        var selectModel = parentClone.components().models[0];
-                                        model.modelToDrop.replaceWith(parentClone);
-                                        setTimeout(function () {
-                                            VjEditor.select(selectModel);
-                                            parentRemove.remove();
-                                            parentRemove = '';
-                                            parentClone = '';
-                                        });
+									if (parentRemove != '' && parentClone != '') {
+										var selectModel = parentClone.components().models[0];
+										model.target.replaceWith(parentClone);
+										setTimeout(function () {
+											VjEditor.select(selectModel);
+											parentRemove.remove();
+											parentRemove = '';
+											parentClone = '';
+										});
+									}
+
+									if (typeof model.target.attributes != 'undefined' && model.target.attributes.type == "carousel-item") {
+
+										$(model.parent.getEl()).find('.active.carousel-item').removeClass('active')
+
+										$(model.parent.find('.carousel-item')).each(function (index, item) {
+											item.removeClass('active');
+										});
+
+										model.parent.find('.carousel-item')[0].addClass('active');
+
+										$(model.parent.parent().getEl()).find('.active.carousel-indicator').removeClass('active');
+										$(model.parent.parent().getEl()).find('.carousel-indicator').first().addClass('active');
+
 									}
 								}
 
-								if (sortermarup != undefined && sortermarup != '' && model != undefined && model.dst != undefined && model.dst.children != undefined) {
-									$.each(model.dst.children, function (k, v) {
+								if (sortermarup != undefined && sortermarup != '' && model.parent != undefined && model.parent.getEl().children != undefined) {
+									$.each(model.parent.getEl().children, function (k, v) {
 										if ($(v).hasClass('gjs-comp-selected')) {
 											$.each(v.children, function (key, val) {
 												if ($(val).attr('vjmod') != undefined)
@@ -1806,9 +1881,9 @@ $(document).ready(function () {
 								}
 
 								sortermarup = '';
+
 								if (!$('.View.Layout').hasClass('active'))
 									VjEditor.stopCommand('core:component-outline');
-
 							});
 
 							VjEditor.Keymaps.add('ns:redo', 'ctrl+y', editor => { console.log('redo call'); VjEditor.UndoManager.redo(); });
@@ -1817,7 +1892,12 @@ $(document).ready(function () {
 							//Adding TabModules
 							VjEditor.on('block:drag:stop', function (model, bmodel) {
 
-								if (typeof model != "undefined") {
+								if (model != null && typeof model != "undefined") {
+
+									if ($(model.getEl()).parents('[data-gjs-type="globalblockwrapper"]').length && model.attributes.type == 'globalblockwrapper') {
+										model.remove();
+										return false;
+									}
 
 									var modelClasses = model.attributes.classes;
 									if (modelClasses.length) {
@@ -1847,7 +1927,7 @@ $(document).ready(function () {
 
 										var Block = model.attributes.type;
 
-										if (Block == 'grid' || Block == 'image-block' || Block == 'modulewrapper')
+										if (Block == 'grid' || Block == 'image-box' || Block == 'modulewrapper')
 											VjEditor.select(model);
 									}
 
@@ -1910,27 +1990,9 @@ $(document).ready(function () {
 									});
 								}
 								else if (bmodel != undefined && bmodel.attributes != undefined && bmodel.attributes.attributes != undefined && bmodel.attributes.attributes.type == 'VjCustomBlock')
-                                    RenderCustomBlock(model, bmodel);
+									RenderCustomBlock(model, bmodel);
 								else if (model != undefined && model.attributes != undefined && model.attributes.attributes != undefined && model.attributes.attributes["data-block-type"] != undefined)
 									RenderBlock(model, bmodel);
-							});
-
-							VjEditor.on('component:drag:end', function (model, bmodel) {
-
-								if (model.target.attributes.type == "carousel-item") {
-
-									$(model.parent.getEl()).find('.active.carousel-item').removeClass('active')
-
-									$(model.parent.find('.carousel-item')).each(function (index, item) {
-										item.removeClass('active');
-									});
-
-									model.parent.find('.carousel-item')[0].addClass('active');
-
-									$(model.parent.parent().getEl()).find('.active.carousel-indicator').removeClass('active');
-									$(model.parent.parent().getEl()).find('.carousel-indicator').first().addClass('active');
-
-								}
 							});
 
 							var ReverseColums = function (model) {
@@ -1938,13 +2000,15 @@ $(document).ready(function () {
 								var flexDirection = model.getStyle()['flex-direction'];
 								var row = model.components().models[0];
 
-								var className = 'col-lg-12';
+								var className = 'col-xl-12';
 								var Device = VjEditor.getDevice();
 
 								if (Device == 'Mobile Portrait')
 									className = 'col-12';
-								else if (Device == 'Tablet' || Device == 'Mobile Landscape')
+								else if (Device == 'Mobile Landscape')
 									className = 'col-sm-12';
+								else if (Device == 'Tablet')
+									className = 'col-md-12';
 
 								if (typeof flexDirection == 'undefined') {
 
@@ -1987,13 +2051,13 @@ $(document).ready(function () {
 									return;
 								}
 								else if (model.attributes.type == 'prev') {
-									var slider = model.closest('[data-gjs-type="carousel"]').find(".carousel-item-prev img");
+									var slider = model.closest('[data-gjs-type="carousel"]');
 									VjEditor.select(slider);
 									VjEditor.runCommand("slider-prev", { slider });
 									return;
 								}
 								else if (model.attributes.type == 'next') {
-									var slider = model.closest('[data-gjs-type="carousel"]').find(".carousel-item-next img");
+									var slider = model.closest('[data-gjs-type="carousel"]');
 									VjEditor.select(slider);
 									VjEditor.runCommand("slider-next", { slider });
 									return;
@@ -2001,8 +2065,8 @@ $(document).ready(function () {
 								else if (model.attributes.type == 'indicator') {
 									var slider = model.closest('[data-gjs-type="carousel"]');
 									VjEditor.select(slider);
-									var index = parseInt(model.getAttributes()['data-slide-to']);
-									$('.gjs-frame').contents().find('#' + slider.getId()).carousel('dispose').carousel({ interval: false }).carousel(index);
+									var index = parseInt(model.getAttributes()['data-bs-slide-to']);
+									$('.gjs-frame').contents().find('#' + slider.getId()).carousel(index);
 									return;
 								}
 								else if (model.attributes.type == 'column') {
@@ -2014,9 +2078,21 @@ $(document).ready(function () {
 											$(dataPane.view.$el).hide(0);
 										});
 									}
-                                }
+								}
+								else if (model.attributes.type == 'icon' || model.attributes.type == 'image') {
 
-                                VjEditor.SelectorManager.setState();
+									if (typeof model.closestType('link') != 'undefined')
+										setTimeout(function () {
+											$(model.getTrait("href").el).parents(".gjs-trt-trait__wrp").hide();
+										});
+									else
+										setTimeout(function () {
+											$(model.getTrait("href").el).parents(".gjs-trt-trait__wrp").show();
+										});
+								}
+
+
+								VjEditor.SelectorManager.setState();
 
 								if (typeof model.attributes.toolbar[0] != 'undefined' && typeof model.attributes.toolbar[0].attributes != 'undefined' && typeof model.attributes.toolbar[0].attributes['title'] == 'undefined') {
 
@@ -2033,6 +2109,25 @@ $(document).ready(function () {
 									});
 								}
 
+								var tb = model.get('toolbar');
+
+								if (model.getStyle()["background-image"] != undefined && model.getStyle()["background-image"].indexOf('url') != -1 && !$(tb.find(element => element.attributes.class == 'fa fa-pencil')).length) {
+
+									tb.splice(0, 0, { attributes: { class: 'fa fa-pencil', title: VjLocalized.EditImage }, command: 'custom-tui-image-editor' });
+
+									VjEditor.getSelected().set('toolbar', tb);
+								}
+								else if (model.getStyle()["background-image"] == undefined && !model.attributes.editor && tb.length > 0) {
+
+									$(tb).each(function (index, item) {
+
+										if (item.attributes && item.attributes.class == "fa fa-pencil")
+											tb.splice(index, 1);
+									});
+
+									VjEditor.getSelected().set('toolbar', tb);
+								}
+
 								$('.gjs-field-color-picker').on('show.spectrum', function () {
 
 									var stylemanager = this.closest('.stylemanager');
@@ -2042,221 +2137,218 @@ $(document).ready(function () {
 									});
 								});
 
+								var sm = VjEditor.StyleManager;
+
 								setTimeout(function () {
 
-									var sm = VjEditor.StyleManager;
 									var target = model;
 
 									if (model.attributes.type == "icon")
 										target = model.components().models[0];
 
-									if (sm.getProperty(Display, 'display').attributes.value == 'flex') {
-										$(sm.getProperty(Display, 'flex-direction').view.el).show();
-										$(sm.getProperty(Display, 'justify-content').view.el).show();
-										$(sm.getProperty(Display, 'align-items').view.el).show();
-										$(sm.getProperty(Display, 'order').view.el).show();
-										$(sm.getProperty(Display, 'flex').view.el).show();
-										$(sm.getProperty(Display, 'align-self').view.el).show();
-									}
-									else {
-										$(sm.getProperty(Display, 'flex-direction').view.el).hide();
-										$(sm.getProperty(Display, 'justify-content').view.el).hide();
-										$(sm.getProperty(Display, 'align-items').view.el).hide();
-										$(sm.getProperty(Display, 'order').view.el).hide();
-										$(sm.getProperty(Display, 'flex').view.el).hide();
-										$(sm.getProperty(Display, 'align-self').view.el).hide();
-									}
+									if (sm.getSector(Display)) {
 
-									//Width
-									var width = target.getStyle()['width'];
-
-									if (typeof width == "undefined") {
-
-										$(sm.getProperty(Size, 'width').view.$el.find('input[type="text"]')).val('auto');
-
-										if (target.getAttributes()['data-block-type'] == "Logo") {
-
-											var logoimg = $(target.getEl()).find('img');
-
-											if (logoimg.get(0).style.width == '')
-												width = logoimg.width();
-											else {
-												width = parseInt(logoimg.get(0).style.width);
-												$(sm.getProperty(Size, 'width').view.$el.find('input')).val(width);
-											}
-
-											$(sm.getProperty(Size, 'width').view.$el.find('input[type="range"]')).val(width);
+										if (sm.getProperty(Display, 'display').attributes.value == 'flex') {
+											$(sm.getProperty(Display, 'container').view.el).show();
+											$(sm.getProperty(Display, 'flex').view.el).show();
 										}
-										else
+										else {
+											$(sm.getProperty(Display, 'container').view.el).hide();
+											$(sm.getProperty(Display, 'flex').view.el).hide();
+										}
+									}
+
+									if (sm.getSector(Size)) {
+
+										//Width
+										var width = target.getStyle()['width'];
+
+										if (typeof width == "undefined") {
+
+											$(sm.getProperty(Size, 'width').view.$el.find('input[type="text"]')).val('auto');
 											$(sm.getProperty(Size, 'width').view.$el.find('input[type="range"]')).val(parseInt($(target.getEl()).css('width')));
-									}
-									else
-										$(sm.getProperty(Size, 'width').view.$el.find('input')).val(parseInt($(target.getEl()).css('width')));
-
-									if ($(sm.getProperty(Size, 'width').view.$el.find('input[type="text"]')).val() != "auto")
-										$(sm.getProperty(Size, 'width').view.$el).find('.gjs-sm-clear').show();
-									else
-										$(sm.getProperty(Size, 'width').view.$el).find('.gjs-sm-clear').hide();
-
-									//Height
-									var height = target.getStyle()['height'];
-
-									if (typeof height == "undefined") {
-
-										$(sm.getProperty(Size, 'height').view.$el.find('input[type="text"]')).val('auto');
-
-										if (target.getAttributes()['data-block-type'] == "Logo") {
-
-											var logoimg = $(target.getEl()).find('img');
-
-											if (logoimg.get(0).style.height == '')
-												height = logoimg.height();
-											else {
-												height = parseInt(logoimg.get(0).style.height);
-												$(sm.getProperty(Size, 'height').view.$el.find('input')).val(height);
-											}
-
-											$(sm.getProperty(Size, 'height').view.$el.find('input[type="range"]')).val(height);
 										}
 										else
+											$(sm.getProperty(Size, 'width').view.$el.find('input')).val(parseInt(width));
+
+										if ($(sm.getProperty(Size, 'width').view.$el.find('input[type="text"]')).val() != "auto")
+											$(sm.getProperty(Size, 'width').view.$el).find('.gjs-sm-clear').show();
+										else
+											$(sm.getProperty(Size, 'width').view.$el).find('.gjs-sm-clear').hide();
+
+										//Height
+										var height = target.getStyle()['height'];
+
+										if (typeof height == "undefined") {
+
+											$(sm.getProperty(Size, 'height').view.$el.find('input[type="text"]')).val('auto');
 											$(sm.getProperty(Size, 'height').view.$el.find('input[type="range"]')).val(parseInt($(target.getEl()).css('height')));
+										}
+										else
+											$(sm.getProperty(Size, 'height').view.$el.find('input')).val(parseInt(height));
+
+
+										if ($(sm.getProperty(Size, 'height').view.$el.find('input[type="text"]')).val() != "auto")
+											$(sm.getProperty(Size, 'height').view.$el).find('.gjs-sm-clear').show();
+										else
+											$(sm.getProperty(Size, 'height').view.$el).find('.gjs-sm-clear').hide();
+
+										//Min Width
+										var minWidth = target.getStyle()['min-width'];
+
+										if (typeof minWidth == "undefined")
+											$(sm.getProperty(Size, 'min-width').view.$el.find('input')).val('auto');
+										else
+											$(sm.getProperty(Size, 'min-width').view.$el.find('input')).val(parseInt(minWidth));
+
+										if ($(sm.getProperty(Size, 'min-width').view.$el.find('input[type="text"]')).val() != "auto")
+											$(sm.getProperty(Size, 'min-width').view.$el).find('.gjs-sm-clear').show();
+										else
+											$(sm.getProperty(Size, 'min-width').view.$el).find('.gjs-sm-clear').hide();
+
+										//Max Width
+										var maxWidth = target.getStyle()['max-width'];
+
+										if (typeof maxWidth == "undefined")
+											$(sm.getProperty(Size, 'max-width').view.$el.find('input')).val('auto');
+										else
+											$(sm.getProperty(Size, 'max-width').view.$el.find('input')).val(parseInt(maxWidth));
+
+										if ($(sm.getProperty(Size, 'max-width').view.$el.find('input[type="text"]')).val() != "auto")
+											$(sm.getProperty(Size, 'max-width').view.$el).find('.gjs-sm-clear').show();
+										else
+											$(sm.getProperty(Size, 'max-width').view.$el).find('.gjs-sm-clear').hide();
+
+										//Min Height
+										var minHeight = target.getStyle()['min-height'];
+
+										if (typeof minHeight == "undefined")
+											$(sm.getProperty(Size, 'min-height').view.$el.find('input')).val('auto');
+										else
+											$(sm.getProperty(Size, 'min-height').view.$el.find('input')).val(parseInt(minHeight));
+
+										if ($(sm.getProperty(Size, 'min-height').view.$el.find('input[type="text"]')).val() != "auto")
+											$(sm.getProperty(Size, 'min-height').view.$el).find('.gjs-sm-clear').show();
+										else
+											$(sm.getProperty(Size, 'min-height').view.$el).find('.gjs-sm-clear').hide();
+
+										//Max Height
+										var maxHeight = target.getStyle()['max-height'];
+
+										if (typeof maxHeight == "undefined")
+											$(sm.getProperty(Size, 'max-height').view.$el.find('input')).val('auto');
+										else
+											$(sm.getProperty(Size, 'max-height').view.$el.find('input')).val(parseInt(maxHeight));
+
+										if ($(sm.getProperty(Size, 'max-height').view.$el.find('input[type="text"]')).val() != "auto")
+											$(sm.getProperty(Size, 'max-height').view.$el).find('.gjs-sm-clear').show();
+										else
+											$(sm.getProperty(Size, 'max-height').view.$el).find('.gjs-sm-clear').hide();
 									}
-									else
-										$(sm.getProperty(Size, 'height').view.$el.find('input')).val(parseInt($(target.getEl()).css('height')));
-
-
-									if ($(sm.getProperty(Size, 'height').view.$el.find('input[type="text"]')).val() != "auto")
-										$(sm.getProperty(Size, 'height').view.$el).find('.gjs-sm-clear').show();
-									else
-										$(sm.getProperty(Size, 'height').view.$el).find('.gjs-sm-clear').hide();
-
-									//Min Width
-									var minWidth = target.getStyle()['min-width'];
-
-									if (typeof minWidth == "undefined")
-										$(sm.getProperty(Size, 'min-width').view.$el.find('input')).val('auto');
-									else
-										$(sm.getProperty(Size, 'min-width').view.$el.find('input')).val(parseInt(minWidth));
-
-									if ($(sm.getProperty(Size, 'min-width').view.$el.find('input[type="text"]')).val() != "auto")
-										$(sm.getProperty(Size, 'min-width').view.$el).find('.gjs-sm-clear').show();
-									else
-										$(sm.getProperty(Size, 'min-width').view.$el).find('.gjs-sm-clear').hide();
-
-									//Max Width
-									var maxWidth = target.getStyle()['max-width'];
-
-									if (typeof maxWidth == "undefined")
-										$(sm.getProperty(Size, 'max-width').view.$el.find('input')).val('auto');
-									else
-										$(sm.getProperty(Size, 'max-width').view.$el.find('input')).val(parseInt(maxWidth));
-
-									if ($(sm.getProperty(Size, 'max-width').view.$el.find('input[type="text"]')).val() != "auto")
-										$(sm.getProperty(Size, 'max-width').view.$el).find('.gjs-sm-clear').show();
-									else
-										$(sm.getProperty(Size, 'max-width').view.$el).find('.gjs-sm-clear').hide();
-
-									//Min Height
-									var minHeight = target.getStyle()['min-height'];
-
-									if (typeof minHeight == "undefined")
-										$(sm.getProperty(Size, 'min-height').view.$el.find('input')).val('auto');
-									else
-										$(sm.getProperty(Size, 'min-height').view.$el.find('input')).val(parseInt(minHeight));
-
-									if ($(sm.getProperty(Size, 'min-height').view.$el.find('input[type="text"]')).val() != "auto")
-										$(sm.getProperty(Size, 'min-height').view.$el).find('.gjs-sm-clear').show();
-									else
-										$(sm.getProperty(Size, 'min-height').view.$el).find('.gjs-sm-clear').hide();
-
-									//Max Height
-									var maxHeight = target.getStyle()['max-height'];
-
-									if (typeof maxHeight == "undefined")
-										$(sm.getProperty(Size, 'max-height').view.$el.find('input')).val('auto');
-									else
-										$(sm.getProperty(Size, 'max-height').view.$el.find('input')).val(parseInt(maxHeight));
-
-									if ($(sm.getProperty(Size, 'max-height').view.$el.find('input[type="text"]')).val() != "auto")
-										$(sm.getProperty(Size, 'max-height').view.$el).find('.gjs-sm-clear').show();
-									else
-										$(sm.getProperty(Size, 'max-height').view.$el).find('.gjs-sm-clear').hide();
-
 								});
 
-								var desktop = 'd-desktop-none';
-								var tablet = 'd-tablet-none';
-								var mobileLandscape = 'd-mobile-landscape-none';
-								var mobilePortrait = 'd-mobile-none';
-
-								if (typeof model.get(desktop) != 'undefined')
-									VjEditor.StyleManager.getProperty(Responsive, desktop).setValue(model.get(desktop));
-
-								if (typeof model.get(tablet) != 'undefined')
-									VjEditor.StyleManager.getProperty(Responsive, tablet).setValue(model.get(tablet));
-
-								if (typeof model.get(mobileLandscape) != 'undefined')
-									VjEditor.StyleManager.getProperty(Responsive, mobileLandscape).setValue(model.get(mobileLandscape));
-
-								if (typeof model.get(mobilePortrait) != 'undefined')
-									VjEditor.StyleManager.getProperty(Responsive, mobilePortrait).setValue(model.get(mobilePortrait));
-
-								if (typeof model.getStyle()['filter'] != "undefined") {
-
-									if (model.getStyle()['filter'].indexOf('blur') != -1)
-										VjEditor.StyleManager.getProperty(Filters, 'blur').view.setValue('true');
-
-									if (model.getStyle()['filter'].indexOf('brightness') != -1)
-										VjEditor.StyleManager.getProperty(Filters, 'brightness').view.setValue('true');
-
-									if (model.getStyle()['filter'].indexOf('contrast') != -1)
-										VjEditor.StyleManager.getProperty(Filters, 'contrast').view.setValue('true');
-
-									if (model.getStyle()['filter'].indexOf('grayscale') != -1)
-										VjEditor.StyleManager.getProperty(Filters, 'grayscale').view.setValue('true');
-
-									if (model.getStyle()['filter'].indexOf('hue-rotate') != -1)
-										VjEditor.StyleManager.getProperty(Filters, 'hue-rotate').view.setValue('true');
-
-									if (model.getStyle()['filter'].indexOf('invert') != -1)
-										VjEditor.StyleManager.getProperty(Filters, 'invert').view.setValue('true');
-
-									if (model.getStyle()['filter'].indexOf('opacity') != -1)
-										VjEditor.StyleManager.getProperty(Filters, 'opacity').view.setValue('true');
-
-									if (model.getStyle()['filter'].indexOf('saturate') != -1)
-										VjEditor.StyleManager.getProperty(Filters, 'saturate').view.setValue('true');
-
-									if (model.getStyle()['filter'].indexOf('sepia') != -1)
-										VjEditor.StyleManager.getProperty(Filters, 'sepia').view.setValue('true');
+								//Responsive
+								if (sm.getSector(Responsive)) {
+									sm.getProperty(Responsive, 'd-desktop-none').setValue("");
+									sm.getProperty(Responsive, 'd-tablet-none').setValue("");
+									sm.getProperty(Responsive, 'd-mobile-landscape-none').setValue("");
+									sm.getProperty(Responsive, 'd-mobile-none').setValue("");
 								}
 
-								if (typeof model.getStyle()['transform'] != "undefined") {
+								//Filters
+								if (sm.getSector(Filters)) {
 
-									if (model.getStyle()['transform'].indexOf('rotateX') != -1)
-										VjEditor.StyleManager.getProperty(Transform, 'rotateX').view.setValue('true');
+									if (typeof model.getStyle()['filter'] != "undefined" && model.getStyle()['filter'].indexOf('blur') != -1)
+										sm.getProperty(Filters, 'blur').view.setValue('true');
+									else
+										sm.getProperty(Filters, 'blur').view.setValue('false');
 
-									if (model.getStyle()['transform'].indexOf('rotateY') != -1)
-										VjEditor.StyleManager.getProperty(Transform, 'rotateY').view.setValue('true');
+									if (typeof model.getStyle()['filter'] != "undefined" && model.getStyle()['filter'].indexOf('brightness') != -1)
+										sm.getProperty(Filters, 'brightness').view.setValue('true');
+									else
+										sm.getProperty(Filters, 'brightness').view.setValue('false');
 
-									if (model.getStyle()['transform'].indexOf('rotateZ') != -1)
-										VjEditor.StyleManager.getProperty(Transform, 'rotateZ').view.setValue('true');
+									if (typeof model.getStyle()['filter'] != "undefined" && model.getStyle()['filter'].indexOf('contrast') != -1)
+										sm.getProperty(Filters, 'contrast').view.setValue('true');
+									else
+										sm.getProperty(Filters, 'contrast').view.setValue('false');
 
-									if (model.getStyle()['transform'].indexOf('scaleX') != -1)
-										VjEditor.StyleManager.getProperty(Transform, 'scaleX').view.setValue('true');
+									if (typeof model.getStyle()['filter'] != "undefined" && model.getStyle()['filter'].indexOf('grayscale') != -1)
+										sm.getProperty(Filters, 'grayscale').view.setValue('true');
+									else
+										sm.getProperty(Filters, 'grayscale').view.setValue('false');
 
-									if (model.getStyle()['transform'].indexOf('scaleY') != -1)
-										VjEditor.StyleManager.getProperty(Transform, 'scaleY').view.setValue('true');
+									if (typeof model.getStyle()['filter'] != "undefined" && model.getStyle()['filter'].indexOf('hue-rotate') != -1)
+										sm.getProperty(Filters, 'hue-rotate').view.setValue('true');
+									else
+										sm.getProperty(Filters, 'hue-rotate').view.setValue('false');
 
-									if (model.getStyle()['transform'].indexOf('scaleZ') != -1)
-										VjEditor.StyleManager.getProperty(Transform, 'scaleZ').view.setValue('true');
+									if (typeof model.getStyle()['filter'] != "undefined" && model.getStyle()['filter'].indexOf('invert') != -1)
+										sm.getProperty(Filters, 'invert').view.setValue('true');
+									else
+										sm.getProperty(Filters, 'invert').view.setValue('false');
 
-									if (model.getStyle()['transform'].indexOf('skewX') != -1)
-										VjEditor.StyleManager.getProperty(Transform, 'skewX').view.setValue('true');
+									if (typeof model.getStyle()['filter'] != "undefined" && model.getStyle()['filter'].indexOf('opacity') != -1)
+										sm.getProperty(Filters, 'opacity').view.setValue('true');
+									else
+										sm.getProperty(Filters, 'opacity').view.setValue('false');
 
-									if (model.getStyle()['transform'].indexOf('skewY') != -1)
-										VjEditor.StyleManager.getProperty(Transform, 'skewY').view.setValue('true');
+									if (typeof model.getStyle()['filter'] != "undefined" && model.getStyle()['filter'].indexOf('saturate') != -1)
+										sm.getProperty(Filters, 'saturate').view.setValue('true');
+									else
+										sm.getProperty(Filters, 'saturate').view.setValue('false');
+
+									if (typeof model.getStyle()['filter'] != "undefined" && model.getStyle()['filter'].indexOf('sepia') != -1)
+										sm.getProperty(Filters, 'sepia').view.setValue('true');
+									else
+										sm.getProperty(Filters, 'sepia').view.setValue('false');
 								}
+
+								//Transform
+
+								if (sm.getSector(Filters)) {
+
+									if (typeof model.getStyle()['transform'] != "undefined" && model.getStyle()['transform'].indexOf('rotateX') != -1)
+										sm.getProperty(Transform, 'rotateX').view.setValue('true');
+									else
+										sm.getProperty(Transform, 'rotateX').view.setValue('false');
+
+									if (typeof model.getStyle()['transform'] != "undefined" && model.getStyle()['transform'].indexOf('rotateY') != -1)
+										sm.getProperty(Transform, 'rotateY').view.setValue('true');
+									else
+										sm.getProperty(Transform, 'rotateY').view.setValue('false');
+
+									if (typeof model.getStyle()['transform'] != "undefined" && model.getStyle()['transform'].indexOf('rotateZ') != -1)
+										sm.getProperty(Transform, 'rotateZ').view.setValue('true');
+									else
+										sm.getProperty(Transform, 'rotateZ').view.setValue('false');
+
+									if (typeof model.getStyle()['transform'] != "undefined" && model.getStyle()['transform'].indexOf('scaleX') != -1)
+										sm.getProperty(Transform, 'scaleX').view.setValue('true');
+									else
+										sm.getProperty(Transform, 'scaleX').view.setValue('false');
+
+									if (typeof model.getStyle()['transform'] != "undefined" && model.getStyle()['transform'].indexOf('scaleY') != -1)
+										sm.getProperty(Transform, 'scaleY').view.setValue('true');
+									else
+										sm.getProperty(Transform, 'scaleY').view.setValue('false');
+
+									if (typeof model.getStyle()['transform'] != "undefined" && model.getStyle()['transform'].indexOf('scaleZ') != -1)
+										sm.getProperty(Transform, 'scaleZ').view.setValue('true');
+									else
+										sm.getProperty(Transform, 'scaleZ').view.setValue('false');
+
+									if (typeof model.getStyle()['transform'] != "undefined" && model.getStyle()['transform'].indexOf('skewX') != -1)
+										sm.getProperty(Transform, 'skewX').view.setValue('true');
+									else
+										sm.getProperty(Transform, 'skewX').view.setValue('false');
+
+									if (typeof model.getStyle()['transform'] != "undefined" && model.getStyle()['transform'].indexOf('skewY') != -1)
+										sm.getProperty(Transform, 'skewY').view.setValue('true');
+									else
+										sm.getProperty(Transform, 'skewY').view.setValue('false');
+								}
+
 
 								$('.tlb-app-setting-panel').hide();
 
@@ -2288,41 +2380,45 @@ $(document).ready(function () {
 									}, 300);
 								}
 
-								model.set('border-position', 'sm-border');
-								FilterBorderOptions(model, 'sm-border');
-								$(VjEditor.StyleManager.getProperty(Border, 'border-position').view.$el.find('input')[0]).prop('checked', true);
-
-								var flexProperty = VjEditor.StyleManager.getProperty(Responsive, 'flex-direction');
-
-								if (model.attributes.type == 'grid') {
-
-									if (flexProperty == null) {
-
-										VjEditor.StyleManager.addProperty(Responsive, {
-											type: 'customradio',
-											name: 'Reverse Columns',
-											property: 'flex-direction',
-											defaults: 'row',
-											list: [{
-												value: 'row-reverse',
-												name: 'Yes',
-											}, {
-												value: 'row',
-												name: 'No',
-											}],
-											UpdateStyles: true,
-										});
-
-										flexProperty = VjEditor.StyleManager.getProperty(Responsive, 'flex-direction');
-									}
-
-									if (model.components().length) {
-										$(model.components().models[0].getEl()).addClass('gjs-dashed');
-									}
+								if (sm.getSector(Border)) {
+									FilterBorderOptions(model, 'sm-border');
+									$(VjEditor.StyleManager.getProperty(Border, 'border-position').view.$el.find('input')[0]).prop('checked', true);
 								}
-								else {
-									if (flexProperty != null)
-										VjEditor.StyleManager.removeProperty(Responsive, 'flex-direction');
+
+								if (sm.getSector(Responsive)) {
+
+									var flexProperty = VjEditor.StyleManager.getProperty(Responsive, 'flex-direction');
+
+									if (model.attributes.type == 'grid') {
+
+										if (flexProperty == null) {
+
+											VjEditor.StyleManager.addProperty(Responsive, {
+												type: 'customradio',
+												name: 'Reverse Columns',
+												property: 'flex-direction',
+												defaults: 'row',
+												list: [{
+													value: 'row-reverse',
+													name: 'Yes',
+												}, {
+													value: 'row',
+													name: 'No',
+												}],
+												UpdateStyles: true,
+											});
+
+											flexProperty = VjEditor.StyleManager.getProperty(Responsive, 'flex-direction');
+										}
+
+										if (model.components().length) {
+											$(model.components().models[0].getEl()).addClass('gjs-dashed');
+										}
+									}
+									else {
+										if (flexProperty != null)
+											VjEditor.StyleManager.removeProperty(Responsive, 'flex-direction');
+									}
 								}
 
 								if (typeof model.attributes.text != 'undefined' && model.attributes.text) {
@@ -2336,7 +2432,7 @@ $(document).ready(function () {
 											name: 'Text decoration',
 											property: 'text-decoration',
 											defaults: 'none',
-											list: [{
+											options: [{
 												value: 'none',
 												name: 'None',
 											}, {
@@ -2354,7 +2450,7 @@ $(document).ready(function () {
 											name: 'Font style',
 											property: 'font-style',
 											defaults: 'normal',
-											list: [{
+											options: [{
 												value: 'normal',
 												name: 'Normal',
 											}, {
@@ -2424,7 +2520,7 @@ $(document).ready(function () {
 											type: 'radio',
 											name: 'Font Weight',
 											property: 'font-weight',
-											list: [{
+											options: [{
 												value: '100',
 												name: 'Thin',
 											}, {
@@ -2449,7 +2545,7 @@ $(document).ready(function () {
 											name: 'Text transform',
 											property: 'text-transform',
 											defaults: 'none',
-											list: [{
+											options: [{
 												value: 'none',
 												name: 'None',
 											}, {
@@ -2463,14 +2559,14 @@ $(document).ready(function () {
 												name: 'Capitalize',
 											}],
 										}],
-									}, { at: 3 })
+									}, { at: 0 })
 								}
-								else if (typeof VjEditor.StyleManager.getSector(Text) != 'undefined')
+								else if (VjEditor.StyleManager.getSector(Text))
 									VjEditor.StyleManager.removeSector(Text);
 
 								$('.gjs-sm-sector').on('click', function () {
 									var $this = $(this);
-									var sectorName = $this.attr('id').replace("gjs-sm-", "");
+									var sectorName = $this.attr('class').split(/\s+/)[1].replace("gjs-sm-sector__", "");
 									if ($this.find('.gjs-sm-properties').is(':visible')) {
 										$.each(VjEditor.StyleManager.getSectors().models, function (index, model) {
 											model.set('open', false);
@@ -2489,11 +2585,11 @@ $(document).ready(function () {
 							});
 
 							VjEditor.on('rte:enable', (model, argument) => {
+
 								if (model.model.attributes.type == 'button-text') {
 									const rte = editor.RichTextEditor;
 									rte.actionbar.parentNode.hidden = true;
 								}
-
 								else {
 
 									rte.actionbar.parentNode.hidden = false;
@@ -2587,23 +2683,10 @@ $(document).ready(function () {
 
 								}
 								else if (model.getAttributes()['data-block-type'] == "Logo" && (property == "width" || property == "height")) {
-
-									var style = model.getStyle()[property];
-									var img = $(model.getEl()).find('img');
-									img.css(property, style);
-
-									var width = img.get(0).style.width;
-									var height = img.get(0).style.height;
-									var attr = model.getAttributes();
-
-									if (width != '')
-										attr['data-style'] = 'width:' + width + ';';
-
-									if (height != '')
-										attr['data-style'] += 'height:' + height + ';';
-
+									const attr = model.getAttributes();
+									delete attr['data-style'];
 									model.setAttributes(attr);
-									model.removeStyle(property);
+									$(model.getEl()).find('img').removeAttr('style');
 								}
 
 								if (typeof event != "undefined" && event.target.className == "gjs-sm-clear")
@@ -2615,20 +2698,12 @@ $(document).ready(function () {
 								var sm = VjEditor.StyleManager;
 
 								if (event.target.value == 'flex') {
-									$(sm.getProperty(Display, 'flex-direction').view.el).show();
-									$(sm.getProperty(Display, 'justify-content').view.el).show();
-									$(sm.getProperty(Display, 'align-items').view.el).show();
-									$(sm.getProperty(Display, 'order').view.el).show();
+									$(sm.getProperty(Display, 'container').view.el).show();
 									$(sm.getProperty(Display, 'flex').view.el).show();
-									$(sm.getProperty(Display, 'align-self').view.el).show();
 								}
 								else {
-									$(sm.getProperty(Display, 'flex-direction').view.el).hide();
-									$(sm.getProperty(Display, 'justify-content').view.el).hide();
-									$(sm.getProperty(Display, 'align-items').view.el).hide();
-									$(sm.getProperty(Display, 'order').view.el).hide();
+									$(sm.getProperty(Display, 'container').view.el).hide();
 									$(sm.getProperty(Display, 'flex').view.el).hide();
-									$(sm.getProperty(Display, 'align-self').view.el).hide();
 								}
 							});
 
@@ -2691,63 +2766,72 @@ $(document).ready(function () {
 
 							});
 
-                            VjEditor.Commands.add('core:copy', {
-                                run(editor, sender) {
+							VjEditor.on('component:styleUpdate:background-image', (model, argument) => {
 
-                                    var filteredSelected = editor.getSelectedAll().filter(item => item.attributes.copyable == true);
-                                    var copiedSelected = [];
+								var backgroundImage = model.getStyle()['background-image'];
 
-                                    if (filteredSelected.length) {
+								if (typeof backgroundImage != "undefined")
+									model.set({ 'src': backgroundImage.replace('url(', '').replace(')', '').replace(/\"/gi, "").replace(/'/g, '') });
 
-                                        filteredSelected = filteredSelected.map(function (comp) {
+							});
 
-                                            const type = comp.attributes.type;
+							VjEditor.Commands.add('core:copy', {
+								run(editor, sender) {
 
-                                            if (comp.parent() && comp.parent().attributes.type != 'wrapper' && (type == 'button' || type == 'icon' || type == 'list' || type == 'image')) {
+									var filteredSelected = editor.getSelectedAll().filter(item => item.attributes.copyable == true);
+									var copiedSelected = [];
 
-                                                if (type == 'image')
-                                                    return comp.parent().parent();
-                                                else
-                                                    return comp.parent();
-                                            }
-                                            else
-                                                return comp;
-                                        });
+									if (filteredSelected.length) {
 
-                                        filteredSelected.forEach(item => {
-                                            copiedSelected.push(item.clone());
-                                        });
+										filteredSelected = filteredSelected.map(function (comp) {
 
-                                        copiedSelected = copiedSelected.map(function (comp) {
+											const type = comp.attributes.type;
 
-                                            const type = comp.attributes.type;
+											if (comp.parent() && comp.parent().attributes.type != 'wrapper' && (type == 'button' || type == 'icon' || type == 'list' || type == 'image')) {
 
-                                            if (comp.findType('modulewrapper').length) {
-                                                comp.findType('modulewrapper').forEach(item => {
-                                                    item.remove();
-                                                });
-                                            }
+												if (type == 'image')
+													return comp.parent().parent();
+												else
+													return comp.parent();
+											}
+											else
+												return comp;
+										});
 
-                                            return comp;
-                                        }); 
-                                                                               
-                                        VjEditor.getModel().set('clipboard', copiedSelected);
-                                    }
-                                }
-                            });
+										filteredSelected.forEach(item => {
+											copiedSelected.push(item.clone());
+										});
 
-                            VjEditor.on('component:paste', (model, argument) => {
-                                
-                                var type = model.attributes.type;
+										copiedSelected = copiedSelected.map(function (comp) {
 
-                                if (type == 'button-box' || type == 'icon-box' || type == 'list-box' || type == 'image-box') {
+											const type = comp.attributes.type;
 
-                                    if (type == 'image-box')
-                                        model.move(model.parent().parent().parent());
-                                    else
-                                        model.move(model.parent().parent());
-                                }
-                            });
+											if (comp.findType('modulewrapper').length) {
+												comp.findType('modulewrapper').forEach(item => {
+													item.remove();
+												});
+											}
+
+											return comp;
+										});
+
+										VjEditor.getModel().set('clipboard', copiedSelected);
+									}
+								}
+							});
+
+							VjEditor.on('component:paste', (model, argument) => {
+
+								var type = model.attributes.type;
+
+								if (type == 'button-box' || type == 'icon-box' || type == 'list-box' || type == 'image-box') {
+
+									if (type == 'image-box')
+										model.move(model.parent().parent().parent());
+									else
+										model.move(model.parent().parent());
+								}
+							});
 
 							VjEditor.Commands.add('global-delete', {
 								run(editor, sender) {
@@ -2886,7 +2970,7 @@ $(document).ready(function () {
 							VjEditor.Commands.add('open-assets', {
 								run(editor, sender) {
 									var event = arguments.length > 2 && void 0 !== arguments[2] ? arguments[2] : {};
-									var target = event.target || editor.getSelected();
+									var target = event.target;
 									window.document.vj_image_target = target;
 									var url = CurrentExtTabUrl + "&guid=a7a5e632-a73a-4792-8049-bc15a9435505";
 									OpenPopUp(null, 900, 'right', VjLocalized.Image, url);
@@ -2944,7 +3028,63 @@ $(document).ready(function () {
 								}
 							});
 
+							VjEditor.on('storage:store', (data, res) => {
+
+								if (res.IsSuccess) {
+									if (typeof res.ShowNotification != 'undefined' && res.ShowNotification)
+										ShowNotification('', VjLocalized.PagePublished, 'success');
+								}
+								else if (res.Message != undefined && res.Message != '')
+									ShowNotification('', res.Message, 'error');
+
+								if (res.SaveContentNotification != undefined && res.SaveContentNotification != '') {
+									eval(res.SaveContentNotification);
+								}
+
+								VJIsSaveCall = false;
+
+								if (res != '' && res.PageReviewSettings != undefined && res.PageReviewSettings) {
+									VJIsContentApproval = res.PageReviewSettings.IsContentApproval ? "True" : "False";
+									VJNextStateName = res.PageReviewSettings.NextStateName;
+									VJIsPageDraft = res.PageReviewSettings.IsPageDraft ? "True" : "False";;
+									VJIsLocked = res.PageReviewSettings.IsLocked ? "True" : "False";;
+									VJIsModeratorEditPermission = res.PageReviewSettings.IsModeratorEditPermission;
+
+									if (VJIsPageDraft == "True")
+										$('#VJBtnPublish').removeClass('disabled');
+									else
+										$('#VJBtnPublish').addClass('disabled');
+
+									if (VJIsPageDraft == "False" || VJIsLocked == "True")
+										$('#VJBtnPublish').addClass('disabled');
+
+									if (VJIsContentApproval == "True" && VJIsLocked == "True")
+										$('.gjs-cv-canvas__frames').addClass('lockcanvas');
+									else
+										$('.gjs-cv-canvas__frames').removeClass('lockcanvas');
+
+									if (res.PageReviewSettings.IsContentApproval)
+										eval(res.ReviewToastMarkup);
+
+									$("#VJnotifycount", parent.document).text(res.NotifyCount);
+								}
+
+								if (res != null && res != '' && res.RedirectAfterm2v != null && typeof res.RedirectAfterm2v != "undefined")
+									window.location.href = res.RedirectAfterm2v;
+								if (IsVJCBRendered)
+									window.parent.location.reload();
+							})
+
 							VjEditor.on('storage:start:store', function (Data) {
+
+								Data['gjs-html'] = VjEditor.getHtml();
+								Data['gjs-css'] = VjEditor.getCss();
+								Data['gjs-components'] = JSON.stringify(VjEditor.getComponents());
+								Data.m2v = m2v;
+								Data.IsPublished = IsPublished;
+								Data.Comment = Comment;
+								Data.EntityID = vjEditorSettings.EntityID;
+
 								if (Data != undefined && Data != '') {
 									var globalblocks = [];
 									$.each(getAllComponents(), function (k, v) {
@@ -2978,12 +3118,13 @@ $(document).ready(function () {
 											catch (err) { console.log(err); }
 										}
 									});
-									Data.globalblocks = JSON.stringify(globalblocks);
+									Data['gjs-globalblocks'] = JSON.stringify(globalblocks);
+									Data = VjCleanData(Data);
 								}
 							});
 
 							VjEditor.on('storage:error', (err) => {
-								swal({ title: "Error", text: `${err}`, type: "error", });
+								swal({ title: "Error", html: true, text: `${err}`, type: "error", });
 							});
 
 							VjEditor.on('storage:start:store', function (Data) {
@@ -2992,38 +3133,7 @@ $(document).ready(function () {
 
 							VjEditor.on('storage:end:store', function (Data) {
 
-								VJIsSaveCall = false;
-
-								if (Data != '' && Data.PageReviewSettings != undefined && Data.PageReviewSettings) {
-									VJIsContentApproval = Data.PageReviewSettings.IsContentApproval ? "True" : "False";
-									VJNextStateName = Data.PageReviewSettings.NextStateName;
-									VJIsPageDraft = Data.PageReviewSettings.IsPageDraft ? "True" : "False";;
-									VJIsLocked = Data.PageReviewSettings.IsLocked ? "True" : "False";;
-									VJIsModeratorEditPermission = Data.PageReviewSettings.IsModeratorEditPermission;
-
-									if (VJIsPageDraft == "True")
-										$('#VJBtnPublish').removeClass('disabled');
-									else
-										$('#VJBtnPublish').addClass('disabled');
-
-									if (VJIsPageDraft == "False" || VJIsLocked == "True")
-										$('#VJBtnPublish').addClass('disabled');
-
-									if (VJIsContentApproval == "True" && VJIsLocked == "True")
-										$('.gjs-cv-canvas__frames').addClass('lockcanvas');
-									else
-										$('.gjs-cv-canvas__frames').removeClass('lockcanvas');
-
-									if (Data.PageReviewSettings.IsContentApproval)
-										eval(Data.ReviewToastMarkup);
-									$("#VJnotifycount", parent.document).text(Data.NotifyCount);
-
-								}
-
-								if (Data != null && Data != '' && Data.RedirectAfterm2v != null && typeof Data.RedirectAfterm2v != "undefined")
-									window.location.href = Data.RedirectAfterm2v;
-								if (IsVJCBRendered)
-									window.parent.location.reload();
+								
 							});
 
 							var iframeBody = VjEditor.Canvas.getBody();
@@ -3040,7 +3150,7 @@ $(document).ready(function () {
 							});
 
 							VjEditor.on('component:add', function (model) {
-								if (model.parent() != undefined && model.parent().attributes.type == "column")
+								if (model.parent() != undefined && (model.parent().attributes.type == "column" || model.parent().attributes.type == "link"))
 									$(model.parent().getEl()).removeAttr("data-empty");
 							});
 
@@ -3070,7 +3180,7 @@ $(document).ready(function () {
 										ShowBlockUI();
 								}
 
-								if (model.parent() != undefined && model.parent().attributes.type == "column" && model.parent().components().length == 0)
+								if (model.parent() != undefined && (model.parent().attributes.type == "column" || model.parent().attributes.type == "link") && model.parent().components().length == 0)
 									$(model.parent().getEl()).attr("data-empty", "true");
 
 								if (model.parent() != undefined && model.parent().attributes.type == "row" && model.parent().components().length == 0) {
@@ -3079,24 +3189,7 @@ $(document).ready(function () {
 								}
 							});
 
-							//Tooltip
-							$('[data-bs-toggle="tooltip"]').tooltip();
-
-							$('.block-elements.blockItem').on("click", function (e) {
-								var messagesrc = CurrentExtTabUrl + "&guid=" + $(this).attr('guid');
-
-								$('#iframeHolder').find('iframe').attr('src', 'about:blank');
-								setTimeout(function () {
-									$("#BlockManager").hide();
-									$("#StyleToolManager").hide();
-									$("#iframeHolder").fadeIn();
-								}, 300);
-								e.preventDefault();
-								$(".About").css({ "pointer-events": "auto" });
-								$('#iframeHolder').find('iframe').attr('src', messagesrc);
-							});
-
-							$(VjEditor.Canvas.getDocument()).on("dblclick", "#wrapper", function (e) {
+							$(VjEditor.Canvas.getDocument()).on("dblclick", "[data-gjs-type='wrapper']", function (e) {
 								Stylemanager();
 							});
 
@@ -3110,6 +3203,8 @@ $(document).ready(function () {
 			}
 		}
 		else {
+			$('a.blockItem.settings').trigger("click");
+			$(window.parent.document.body).find('.pageloader').remove();
 			$('.sidebar').removeClass('sidebar-open').addClass('settingclosebtn');
 		}
 	}
@@ -3119,32 +3214,230 @@ $(document).ready(function () {
 		$(".panel-top, #BlockManager, .block-set, #ContentBlocks").show();
 	};
 
+	//start data cleanup
+	var VjCleanData = function (Data) {
+		var Css = Data['gjs-css'];
+		var Content = Data['gjs-html'];
+		var Components = JSON.parse(Data['gjs-components']);
+		var Styles = Data.styles;
+		var Globalblocks = Data['gjs-globalblocks'] != undefined ? JSON.parse(Data['gjs-globalblocks']) : '';
+		var Ids = [];
+		VjGetAllIds(Components, Ids);
+		Styles = VjFilterStyle(Styles, Ids);
+		var StyleIds = [];
+		var GlobalKeyValuePairs = [];
+		var GlobalStyleKeyValuePairs = [];
+		VjRemoveGlobalBlockComponents(Components, StyleIds, GlobalKeyValuePairs, Globalblocks);
+		VjRemoveGlobalBlockStyles(Styles, StyleIds, GlobalStyleKeyValuePairs);
+		Content = VjRemoveGlobalBlockContent(Content);
+		Css = VjFilterCss(Css, StyleIds);
+
+		Data['gjs-css'] = Css;
+		Data['gjs-html'] = Content;
+		Data['gjs-components'] = JSON.stringify(Components);
+		Data.styles = JSON.stringify(Styles);
+		Data['gjs-globalblocks'] = JSON.stringify(Globalblocks);
+		Data['gjs-globalkeyvaluepairs'] = JSON.stringify(GlobalKeyValuePairs);
+		Data['gjs-globalstylekeyvaluepairs'] = GlobalStyleKeyValuePairs.length > 0 ? JSON.stringify(GlobalStyleKeyValuePairs) : '';
+		return Data;
+	};
+	var VjGetAllIds = function (contentJSON, ids) {
+		if (contentJSON != undefined) {
+			$.each(contentJSON, function (i, v) {
+				if (v.attributes != null && v.attributes["id"] != undefined)
+					ids.push(v.attributes["id"]);
+				if (v.components != undefined)
+					VjGetAllIds(v.components, ids);
+			});
+		}
+	};
+	var VjFilterStyle = function (styleJSON, ids) {
+		if (styleJSON != undefined) {
+			var itemsToRemove = [];
+			$.each(styleJSON, function (i, v) {
+				let selectorIds = [];
+				if (v.selectors != undefined) {
+					$.each(v.selectors, function (ii, vv) {
+						if (vv.name != undefined)
+							selectorIds.push(vv.name);
+						else {
+							try { selectorIds.push(vv.replace(/#/gi, "").replace(/\./gi, "")); } catch { }
+						}
+					});
+				}
+				let del = true;
+				$.each(selectorIds, function (ii, vv) {
+					if (ids.indexOf(vv) >= 0) {
+						del = false;
+						return false;
+					}
+				});
+				if (del)
+					itemsToRemove.push(v);
+			});
+			$.each(itemsToRemove, function (i, v) {
+				const index = styleJSON.indexOf(v);
+				if (index > -1) {
+					styleJSON.splice(index, 1);
+				}
+			});
+		}
+		return styleJSON;
+	};
+	var VjRemoveGlobalBlockComponents = function (contentJSON, StyleIds, GlobalKeyValuePairs, DeserializedGlobalBlocksJSON) {
+		if (contentJSON != null) {
+			$.each(contentJSON, function (i, con) {
+				if (con.type != undefined && (con.type == "module" || con.type == "blockwrapper")) {
+					con.content = "";
+				}
+				else if (con.type != undefined && con.type == "globalblockwrapper") {
+					if (con.attributes != undefined && con.attributes["data-guid"] != undefined && VjGetGlobalIndex(GlobalKeyValuePairs, con.attributes["data-guid"]) < 0) {
+						let ccid = '';
+						if (con.attributes["id"] != undefined)
+							ccid = con.attributes["id"];
+						if (VjIsGlobalBlockUnlocked(ccid, con.attributes["data-guid"], DeserializedGlobalBlocksJSON))
+							GlobalKeyValuePairs.push({ guid: con.attributes["data-guid"], value: con.components });
+						VjExtractStyleIds(con.attributes["data-guid"], con.components, StyleIds);
+						delete con.components;
+					}
+				}
+				else if (con.components != undefined) {
+					VjRemoveGlobalBlockComponents(con.components, StyleIds, GlobalKeyValuePairs, DeserializedGlobalBlocksJSON);
+				}
+			});
+		}
+	};
+	var VjIsGlobalBlockUnlocked = function (ccid, guid, blocksJSON) {
+		var result = false;
+		if (blocksJSON != undefined && blocksJSON.length > 0) {
+			$.each(blocksJSON, function (i, con) {
+				if (con.guid != undefined && con.guid == guid) {
+					if (ccid != undefined && ccid.length > 0 && con.ccid != undefined) {
+						if (con.ccid == ccid) {
+							result = true;
+							return false;
+						}
+					}
+					else {
+						result = true;
+						return false;
+					}
+				}
+			});
+		}
+		return result;
+	};
+	var VjExtractStyleIds = function (guid, components, styleIds) {
+		if (components != undefined) {
+			$.each(components, function (i, con) {
+				if (con.attributes != undefined && con.attributes["id"] != undefined) {
+					var styleIndex = VjGetGlobalIndex(styleIds, guid);
+					if (styleIndex >= 0) {
+						let existing = styleIds[styleIndex];
+						existing.value.push(con.attributes["id"]);
+						styleIds[styleIndex] = existing;
+					}
+					else {
+						let obj = [];
+						obj.push(con.attributes["id"]);
+						styleIds.push({ guid: guid, value: obj });
+					}
+				}
+				if (con.components != null) {
+					VjExtractStyleIds(guid, con.components, styleIds);
+				}
+			});
+		}
+	};
+	var VjRemoveGlobalBlockStyles = function (contentJSON, StyleIds, GlobalStyleKeyValuePairs) {
+		if (contentJSON != null) {
+			var itemsToRemove = [];
+			$.each(contentJSON, function (i, con) {
+				if (con.selectors != undefined) {
+					$.each(con.selectors, function (i, cons) {
+						var breaked = false;
+						$.each(StyleIds, function (is, style) {
+							try {
+								if (cons != undefined && (cons.name != undefined && style.value.indexOf(cons.name) >= 0) || style.value.indexOf(cons.replace(/#/gi, "").replace(/\./gi, "")) >= 0) {
+									var styleIndex = VjGetGlobalStyleIndex(itemsToRemove, style.guid);
+									if (styleIndex >= 0) {
+										var existing = itemsToRemove[styleIndex];
+										existing.Value.push(con);
+										itemsToRemove[styleIndex] = existing;
+									}
+									else {
+										var obj = [];
+										obj.push(con);
+										itemsToRemove.push({ Key: style.guid, Value: obj });
+									}
+									breaked = true;
+									return false;
+								}
+							}
+							catch (err) { }
+						});
+						if (breaked)
+							return false;
+					});
+				}
+			});
+			$.each(itemsToRemove, function (i, item) {
+				$.each(item.Value, function (ii, con) {
+					const index = contentJSON.indexOf(con);
+					if (index > -1) {
+						contentJSON.splice(index, 1);
+					}
+				});
+				GlobalStyleKeyValuePairs.push({ Key: item.Key, Value: item.Value });
+			});
+		}
+	};
+	var VjGetGlobalIndex = function (contentJSON, guid) {
+		var index = -1;
+		$.each(contentJSON, function (i, item) {
+			if (item.guid == guid) {
+				index = i;
+				return false;
+			}
+		});
+		return index;
+	};
+	var VjGetGlobalStyleIndex = function (contentJSON, guid) {
+		var index = -1;
+		$.each(contentJSON, function (i, item) {
+			if (item.Key == guid) {
+				index = i;
+				return false;
+			}
+		});
+		return index;
+	};
+	var VjRemoveGlobalBlockContent = function (Content) {
+		var markup = $('<div>' + Content + '</div>');
+		markup.find('[data-block-type="global"]').html('');
+		Content = markup.html();
+		return Content;
+	};
+	var VjFilterCss = function (Css, StyleIds) {
+		if (StyleIds.length > 0) {
+			$.each(StyleIds, function (i, item) {
+				$.each(item.value, function (ii, style) {
+					var regexp = new RegExp("(#" + style + "*\s*{[^}]*})|(#" + style + ":[^{]*\s*{[^}]*})", 'ig');
+					Css = Css.replace(regexp, '');
+				});
+			});
+		}
+		return Css;
+	};
+	//end data cleanup
+
 	var GrapesjsDestroy = function () {
 		if (VjEditor) {
 			VjEditor.destroy();
 			window.parent.location.reload();
-			//$.get(CurrentTabUrl + (CurrentTabUrl.indexOf("?") != -1 ? "&uxmode=true" : "?uxmode=true"), function (data) {
-			//	var html = $.parseHTML(data);
-			//	var dom = $(data);
-			//	var newhtml = $(html).find('#dnn_ContentPane');
-			//	$('#dnn_ContentPane').html('');
-			//	$('#dnn_ContentPane').html($(newhtml).html());
-			//	$('#dnn_ContentPane').removeClass("sidebar-open");
-			//	var Scripts_Links = $(data).find('script');
-			//	$.each(dom, function (i, v) {
-			//		Scripts_Links.push(v);
-			//	});
-			//	$.each($(data).find('style'), function (i, v) {
-			//		Scripts_Links.push(v);
-			//	});
-			//	$(window.parent.document).find('style[vjdataguid]').remove();
-			//	InjectLinksAndScripts(Scripts_Links, window.document);
-			//	InitAppActionMenu();
-			//	$(window.parent.document.body).find('.pageloader').remove();
-			//});
 		}
-		// Remove All Managers
-		$('#ContentBlocks, .styleManager, .traitsManager').empty();
+		else
+			$(window.parent.document.body).find('.pageloader').remove();
 	};
 
 	var VjInit = function () {
@@ -3165,7 +3458,7 @@ $(document).ready(function () {
 			if (window.location.href.indexOf('#') > 0 && window.location.href.split("#")[0] != CurrentTabUrl) {
 				window.location.href = CurrentTabUrl.split('/uxmode')[0];
 			}
-			if ($(window).width() < 1000) {
+			if ($(window).width() < 1260) {
 				setTimeout(function () {
 					$(window.parent.document.body).find('.gjs-cv-canvas__frames').addClass('deviceframe');
 				}, 300);
@@ -3174,7 +3467,7 @@ $(document).ready(function () {
 			$('#dnn_ContentPane').addClass("sidebar-open").removeClass('sidebar-close');
 			$('.sidebar').animate({ "left": "0" }, "fast").removeClass('settingclosebtn');
 			$('.panel-top, .add-custom , #ContentBlocks').show();
-			window.GrapesjsInit(vjEditorSettings);
+			window.GrapesjsInit();
 			DestroyAppActionMenu();
 		});
 	};
@@ -3219,7 +3512,7 @@ $(document).ready(function () {
 			$('.stylemanager').show();
 			$('.stylemanager .gjs-sm-sector').click(function () {
 				var $this = $(this);
-				var sectorName = $this.attr('id').replace("gjs-sm-", "");
+				var sectorName = $this.attr('class').split(' ')[1].replace("gjs-sm-sector__", "");
 				if ($this.find('.gjs-sm-properties').is(':visible')) {
 					$.each(VjEditor.StyleManager.getSectors().models, function (index, model) {
 						model.set('open', false);
@@ -3265,8 +3558,12 @@ $(document).ready(function () {
 			$(this).parent().addClass('active');
 			ChangeBlockType();
 		}
-		else if ($this.hasClass('librarytab'))
-			parent.OpenPopUp(null, '100%', 'center', VjLocalized.TemplateLibrary, TemplateLibraryURL, '100%', true, false, null, false);
+		else if ($this.hasClass('librarytab')) {
+			if (vjEditorSettings.TemplateLibraryURL != null && vjEditorSettings.TemplateLibraryURL != '')
+				parent.OpenPopUp(null, '100%', 'center', VjLocalized.TemplateLibrary, vjEditorSettings.TemplateLibraryURL, '100%', true, false, null, false);
+			else
+				parent.OpenPopUp(null, '100%', 'center', VjLocalized.TemplateLibrary, TemplateLibraryURL, '100%', true, false, null, false);
+		}
 		else {
 			$('.blockstab').removeClass('active');
 			$(this).parent().addClass('active');
@@ -3312,12 +3609,12 @@ $(document).ready(function () {
 		//Desktop
 		if ($this.attr("id") == "Desktop") {
 
-			if (vjEditorSettings.EditPage) {
+			if (vjEditorSettings.ResponsiveStyling) {
 				$iframe.removeClass("fixed-height");
 				$iframe.contents().find("html").removeClass('responsive');
 				$iframe.contents().find("html").removeClass('mobile-responsive');
 				$iframe.removeClass('mobile-landscape-height');
-				$iframe.contents().find("#wrapper").removeClass("scrollbar");
+				$iframe.contents().find("[data-gjs-type='wrapper']").removeClass("scrollbar");
 				VjEditor.runCommand('set-device-desktop');
 			}
 			else
@@ -3326,10 +3623,10 @@ $(document).ready(function () {
 		//Tablet Portrait
 		else if ($this.attr("id") == "Tablet") {
 
-			if (vjEditorSettings.EditPage) {
+			if (vjEditorSettings.ResponsiveStyling) {
 				$iframe.removeClass("fixed-height mobile-landscape-height");
 				$iframe.contents().find("html").addClass('responsive');
-				$iframe.contents().find("#wrapper").addClass("scrollbar");
+				$iframe.contents().find("[data-gjs-type='wrapper']").addClass("scrollbar");
 				$iframe.contents().find("html").removeClass('mobile-responsive');
 				VjEditor.runCommand('set-device-tablet');
 			}
@@ -3339,12 +3636,12 @@ $(document).ready(function () {
 		//Mobile Portrait
 		else if ($this.attr("id") == "Mobile") {
 
-			if (vjEditorSettings.EditPage) {
+			if (vjEditorSettings.ResponsiveStyling) {
 				$iframe.addClass("fixed-height");
 				$iframe.contents().find("html").addClass('responsive');
 				$iframe.contents().find("html").removeClass('mobile-responsive');
 				$iframe.removeClass('mobile-landscape-height');
-				$iframe.contents().find("#wrapper").addClass("scrollbar");
+				$iframe.contents().find("[data-gjs-type='wrapper']").addClass("scrollbar");
 				VjEditor.runCommand('set-device-mobile-portrait');
 			}
 			else
@@ -3354,12 +3651,12 @@ $(document).ready(function () {
 		//MobileLandscape
 		else if ($this.attr("id") == "MobileLandscape") {
 
-			if (vjEditorSettings.EditPage) {
+			if (vjEditorSettings.ResponsiveStyling) {
 				$iframe.removeClass("fixed-height");
 				$iframe.addClass("mobile-landscape-height");
 				$iframe.contents().find("html").addClass('mobile-responsive');
 				$iframe.contents().find("html").removeClass('responsive');
-				$iframe.contents().find("#wrapper").addClass("scrollbar");
+				$iframe.contents().find("[data-gjs-type='wrapper']").addClass("scrollbar");
 				VjEditor.runCommand('set-device-mobile-landscape');
 			}
 			else {
@@ -3499,15 +3796,15 @@ global.ChangeBlockType = function (query) {
 };
 
 function RunSaveCommand() {
-	editor.StorageManager.getStorages().remote.attributes.params.IsPublished = true;
+	IsPublished = true;
 	if (GetParameterByName('m2v', parent.window.location) != null)
-		editor.StorageManager.getStorages().remote.attributes.params.m2v = true;
+		m2v = true;
 	IsVJEditorSaveCall = true;
-	editor.runCommand("save");
-	editor.StorageManager.getStorages().remote.attributes.params.IsPublished = false;
+	VjEditor.runCommand("save");
+	IsPublished = false;
 	$('#VJBtnPublish').addClass('disabled');
 	$($('.panelheader .blockItem')[1]).click();
-	editor.StorageManager.getStorages().remote.attributes.params.Comment = "";
+	Comment = "";
 	$('#VJReviewComment', parent.document).val('');
 };
 
@@ -3612,9 +3909,9 @@ global.ConfirmReviewChange = function (FirstStateName) {
 				$('.gjs-cv-canvas__frames').removeClass('lockcanvas');
 				VJIsLocked = 'False';
 				$('.toast-close-button').click();
-				editor.StorageManager.getStorages().remote.attributes.params.IsPublished = false;
-				editor.StorageManager.getStorages().remote.attributes.params.Comment = '';
-				editor.runCommand("save");
+				IsPublished = false;
+				Comment = '';
+				VjEditor.runCommand("save");
 				$('#VJBtnPublish').removeClass('disabled');
 			}
 		});
@@ -3683,7 +3980,10 @@ global.ChangeToWebp = function (target, URLs) {
 
 				if (item.attributes.type == "image" || item.attributes.type == "image-gallery-item") {
 
-					window.document.vj_image_target = target.components().models[2];
+					if (target.components().models[2] != undefined)
+						window.document.vj_image_target = target.components().models[2];
+					else
+						window.document.vj_image_target = target.components().models[0];
 
 					style = item.getStyle();
 					style['max-width'] = maxWidth + 'px';
@@ -3752,7 +4052,10 @@ global.FilterBorderOptions = function (target, position) {
 
 		if (typeof target.getStyle()[color] == "undefined") {
 
-			var brdcolor = $(target.getEl()).css('border-color');
+			var brdcolor = target.getStyle()[color];
+
+			if (typeof brdcolor == "undefined")
+				brdcolor = $(target.getEl()).css('color');
 
 			sm.getProperty(Border, color).view.$el.find('input').val(brdcolor);
 			sm.getProperty(Border, color).view.$el.find('.gjs-field-color-picker').css('background-color', brdcolor);

@@ -11,7 +11,8 @@
                 'Password': Form.find('input.password').val(),
                 'ConfirmPassword': Form.find('input.password').val(),
                 'DisplayName': Form.find('input.displayname').val(),
-                'Email': Form.find('input.email').val()
+                'Email': Form.find('input.email').val(),
+                'VerificationCode': Form.find('input.verificationcode').val()
             };
             var registerText = obj.attr('attr-localize-register-text');
             if ($.trim(registerText) == "" || registerText == null)
@@ -21,7 +22,7 @@
             obj.addClass('disabled');
             $.ajax({
                 type: "POST",
-                url: window.location.origin + $.ServicesFramework(-1).getServiceRoot("Register") + "Register/Index",
+                url: window.location.origin + $.ServicesFramework(-1).getServiceRoot("Register") + "Register/Index" + window.location.search,
                 data: data,
                 headers: {
                     'ModuleId': parseInt(sf.getModuleId()),
@@ -30,7 +31,14 @@
                 },
                 success: function (response) {
                     if (response.IsSuccess) {
-                        if (response.Data != null && response.Data.RedirectURL != null) {
+                        if (response.Data != null && response.Data.RedirectURL == undefined && response.Data.ShowVerificationCode != undefined) {
+                            $('<div class="show-message alert alert-success">' + response.Message + '</div>').insertAfter(Form.find('.Registerhead'));
+                            $('.dvverificationcode').show();
+                            $('.dvregisterfrm').hide();
+                            obj.removeClass('disabled');
+                            obj.html(registerText);
+                        }
+                        else if (response.Data != null && response.Data.RedirectURL != null) {
                             window.location.href = response.Data.RedirectURL;
                         }
                         else if (response.Message != null && response.Message != "") {
@@ -47,6 +55,14 @@
                         obj.html(registerText);
                         $('<div class="show-message alert alert-danger">' + response.Message + '</div>').insertAfter(Form.find('.Registerhead'));
                         obj.removeClass('disabled');
+                    }
+
+                    if (response.Errors["ProfileUpdate"] != null && typeof response.Errors["ProfileUpdate"] != "undefined") {
+                        $(obj).closest('.Register').find('#registerbtn').html(registerText);
+                        $(obj).closest('.Register').find('#registerbtn').removeClass('disabled');
+                        if (response.Data != null && response.Data.UserExtensionURL != null) {
+                            parent.OpenPopUp(null, 800, 'right', null, response.Data.UserExtensionURL);
+                        }
                     }
                 },
                 error: function (Error) {

@@ -127,7 +127,7 @@ namespace Vanjaro.UXManager.Extensions.Menu.Users
                 switch (property.DefaultVisibility)
                 {
                     case UserVisibilityMode.AllUsers:
-                        isVisible = true;
+                        isVisible = property.Visible;
                         // property is visible to everyone so do nothing
                         break;
                     case UserVisibilityMode.MembersOnly:
@@ -220,7 +220,7 @@ namespace Vanjaro.UXManager.Extensions.Menu.Users
                     user = UsersController.GetUser(user.UserID, PortalSettings.Current, UserInfo, out response);
                     ProfilePropertyDefinition profilePropertyDefinition = user.Profile.ProfileProperties.GetByName("Photo");
                     if (profilePropertyDefinition != null)
-                        profileProperties.Add(new Entities.ProfileProperties { ProfilePropertyDefinition = profilePropertyDefinition, ListEntries = new List<ListEntryInfo>() });
+                        profileProperties.Add(new Entities.ProfileProperties { ProfilePropertyDefinition = new CopyofProfilePropertyDefinition(profilePropertyDefinition), ListEntries = new List<ListEntryInfo>() });
                 }
             }
 
